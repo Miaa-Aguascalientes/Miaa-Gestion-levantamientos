@@ -581,7 +581,7 @@ with st.sidebar:
   )
 
   df_sidebar_levantamientos, _ = obtener_datos(
-      'SELECT fid, medidorId, serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
+      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
   )
 
   if not df_sidebar_levantamientos.empty:
@@ -629,9 +629,9 @@ st.markdown(
 )
 
 COLUMNAS_LEV = """
-    fid, medidorId, serie, toma, domicilio, colonia, latitud, longitud, precisionGps, 
-    ajusteManual, observaciones, usuarioNombre, fechaRegistro, fechaModificacion, 
-    activo, "Predio_Viv", "Latitud", "Longitud", _Ult_actualizacion,
+    fid, "medidorId", serie, toma, domicilio, colonia, latitud, longitud, "precisionGps", 
+    "ajusteManual", observaciones, "usuarioNombre", "fechaRegistro", "fechaModificacion", 
+    activo, "Predio_Viv", "Latitud", "Longitud", "_Ult_actualizacion",
     ST_X(geom) as coord_x, ST_Y(geom) as coord_y
 """
 
@@ -690,7 +690,7 @@ if st.session_state.active_tab == "📍 Registros":
       query = f"""
                 SELECT {COLUMNAS_LEV} 
                 FROM "Usuarios"."levantamientos" 
-                WHERE medidorId ILIKE :filtro 
+                WHERE "medidorId" ILIKE :filtro 
                    OR serie ILIKE :filtro 
                    OR CAST(toma AS TEXT) ILIKE :filtro
                    OR domicilio ILIKE :filtro 
@@ -982,7 +982,7 @@ elif st.session_state.active_tab == "🗺️ Mapa":
   query_mapa = """
         SELECT 
             fid,
-            medidorId,
+            "medidorId",
             serie,
             toma,
             domicilio,
@@ -1229,9 +1229,9 @@ elif st.session_state.active_tab == "➕ Añadir":
 
         sql_insert = """
                     INSERT INTO "Usuarios"."levantamientos" (
-                        medidorId, serie, toma, domicilio, colonia, latitud, longitud, 
-                        precisionGps, ajusteManual, observaciones, usuarioNombre, 
-                        fechaRegistro, fechaModificacion, activo, "Predio_Viv", "Latitud", "Longitud", geom
+                        "medidorId", serie, toma, domicilio, colonia, latitud, longitud, 
+                        "precisionGps", "ajusteManual", observaciones, "usuarioNombre", 
+                        "fechaRegistro", "fechaModificacion", activo, "Predio_Viv", "Latitud", "Longitud", geom
                     ) VALUES (
                         :medidorId, :serie, :toma, :domicilio, :colonia, :latitud, :longitud, 
                         :precisionGps, :ajusteManual, :observaciones, :usuarioNombre, 
@@ -1281,7 +1281,7 @@ elif st.session_state.active_tab == "⚙️ Editar":
     query_edit = f"""
             SELECT {COLUMNAS_LEV} 
             FROM "Usuarios"."levantamientos" 
-            WHERE medidorId ILIKE :filtro 
+            WHERE "medidorId" ILIKE :filtro 
                OR serie ILIKE :filtro 
                OR CAST(toma AS TEXT) ILIKE :filtro
                OR domicilio ILIKE :filtro 
@@ -1518,13 +1518,13 @@ elif st.session_state.active_tab == "⚙️ Editar":
 
           sql_update = """
                         UPDATE "Usuarios"."levantamientos" 
-                        SET medidorId = :medidorId, serie = :serie, toma = :toma, 
+                        SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
                             domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
-                            longitud = :longitud, precisionGps = :precisionGps, 
-                            ajusteManual = :ajusteManual, observaciones = :observaciones, 
+                            longitud = :longitud, "precisionGps" = :precisionGps, 
+                            "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
                             activo = :activo, "Predio_Viv" = :Predio_Viv, 
                             "Latitud" = :Latitud, "Longitud" = :Longitud, 
-                            fechaModificacion = :fechaModificacion, 
+                            "fechaModificacion" = :fechaModificacion, 
                             geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
                         WHERE fid = :fid
                     """
