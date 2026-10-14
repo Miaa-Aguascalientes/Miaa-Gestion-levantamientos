@@ -190,16 +190,6 @@ def agregar_capas_base_mapa(m):
       checked=True,
   ).add_to(m)
 
-  folium.TileLayer(
-      tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      name="Satélite (Esri)",
-      attr="Esri",
-      max_zoom=20,
-      overlay=False,
-      control=True,
-      checked=False,
-  ).add_to(m)
-
 # 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
 st.write(
     """<style>
@@ -741,8 +731,8 @@ if st.session_state.active_tab == "⚙️ Editar":
                 icon=folium.Icon(color="cyan", icon="info-sign"),
             ).add_to(m_ed)
 
-          folium.LayerControl(collapsed=False).add_to(m_ed)
-          
+          # LayerControl removido ya que solo hay una capa activa (Vista Satélite de Google)
+
           st_folium(
               m_ed,
               width="100%",
@@ -821,7 +811,6 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Botón para restablecer datos originales del registro en pantalla
     if st.button("🔄 Restablecer Originales", key="btn_reset_sidebar", use_container_width=True):
       e_fid = int(row_first["fid"])
       x_key = f"coord_x_input_{e_fid}"
