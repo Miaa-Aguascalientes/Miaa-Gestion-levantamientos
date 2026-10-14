@@ -946,9 +946,9 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  # Mapa 3D de Polígonos de Instalación
+  # Mapa 3D de Ubicación de Medidores (Barra delgadas estilo alfiler)
   st.markdown(
-      "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Mapa de Polígonos de Instalación</h4>",
+      "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
@@ -956,7 +956,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
         SELECT fid, "medidorId", ST_X(geom) as lon, ST_Y(geom) as lat 
         FROM "Usuarios"."levantamientos" 
         WHERE geom IS NOT NULL 
-        LIMIT 500
+        LIMIT 1000
     """)
 
   if not err_map_3d and not df_map_3d.empty:
@@ -966,12 +966,12 @@ if st.session_state.active_tab == "📊 Dashboard General":
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
-            "elevation": 150,
-            "color": [0, 212, 255, 180],
+            "elevation": 30,  # Altura corta
+            "color": [0, 229, 255, 200],
         })
 
     view_state = pdk.ViewState(
-        latitude=21.8853, longitude=-102.2916, zoom=12, pitch=45, bearing=0
+        latitude=21.8853, longitude=-102.2916, zoom=14, pitch=45, bearing=0
     )
 
     layer = pdk.Layer(
@@ -979,8 +979,8 @@ if st.session_state.active_tab == "📊 Dashboard General":
         data=puntos_3d,
         get_position="position",
         get_elevation="elevation",
-        elevation_scale=5,
-        radius=50,
+        elevation_scale=1,  # Escala de elevación baja
+        radius=3,           # Radio de 3 metros para columnas muy delgadas
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
