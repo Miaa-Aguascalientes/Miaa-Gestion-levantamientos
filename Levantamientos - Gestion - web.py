@@ -557,6 +557,9 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
+  # Variable global temporal para el row_first si estamos en Editar
+  # (Se evalúa abajo al cargar la pestaña Editar)
+
   df_sidebar_levantamientos, _ = obtener_datos(
       'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
   )
@@ -603,13 +606,6 @@ row_first = None
 if st.session_state.active_tab == "⚙️ Editar":
   busqueda_edit = st.session_state.get("busqueda_edit_val", "")
 
-  # Campo de búsqueda limpia arriba
-  st.text_input(
-      "🔍 Buscar predio a editar (Medidor ID, Serie, Toma, Domicilio, Colonia):",
-      placeholder="Ej. MED-001, Centro...",
-      key="busqueda_edit_val",
-  )
-
   if busqueda_edit and busqueda_edit.strip() != "":
     filtro_ed = f"%{busqueda_edit.strip()}%"
     query_edit = f"""
@@ -630,30 +626,37 @@ if st.session_state.active_tab == "⚙️ Editar":
     )
     df_lev, error_db = obtener_datos(query)
 
+  col_search, col_info, col_msg = st.columns([2.5, 1.5, 2], vertical_alignment="center")
+
+  with col_search:
+    st.text_input(
+        "🔍 Buscar predio a editar (Medidor ID, Serie, Toma, Domicilio, Colonia):",
+        placeholder="Ej. MED-001, Centro...",
+        key="busqueda_edit_val",
+    )
+
   if error_db:
     st.error(f"Error: {error_db}")
   elif not df_lev.empty:
     row_first = df_lev.iloc[0]
 
-    # Tarjeta limpia con resumen de información del predio
-    msg_texto = (
-        "Mostrando la primera coincidencia encontrada."
-        if (busqueda_edit and busqueda_edit.strip() != "")
-        else "Mostrando el primer registro de la base de datos."
-    )
-    st.markdown(
-        f"""
-        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #00E5FF; border-radius: 6px; padding: 10px 16px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <span style="color: #00E5FF; font-weight: 800; font-size: 1rem;">FID: {row_first['fid']}</span>
-                <span style="color: #64748B; margin: 0 10px;">|</span>
-                <span style="color: #F8FAFC; font-weight: 700; font-size: 0.95rem;">Medidor ID: {row_first['medidorId']}</span>
-            </div>
-            <div style="color: #94A3B8; font-size: 0.8rem;">{msg_texto}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with col_info:
+      st.markdown(
+          f"<div style='margin-top: 15px;'><span style='color: #00E5FF; font-weight: bold;'>FID: {row_first['fid']}</span> | "
+          f"<span style='color: #F8FAFC; font-weight: bold;'>Medidor ID: {row_first['medidorId']}</span></div>",
+          unsafe_allow_html=True,
+      )
+
+    with col_msg:
+      msg_texto = (
+          "Mostrando la primera coincidencia encontrada."
+          if (busqueda_edit and busqueda_edit.strip() != "")
+          else "Mostrando el primer registro de la base de datos."
+      )
+      st.markdown(
+          f"<p style='color: #94A3B8; font-size: 0.85rem; margin-top: 20px; margin-bottom: 0px;'>{msg_texto}</p>",
+          unsafe_allow_html=True,
+      )
 
     for idx, row in df_lev.iterrows():
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
@@ -694,46 +697,97 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      col_inputs_left, col_map_right = st.columns([1.35, 1], gap="medium")
+      col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
-        # Formulario completo organizado en 4 columnas limpias
-        c1, c2, c3, c4 = st.columns([1, 1, 1, 0.8])
-        
-        with c1:
-          st.text_input("FID", value=str(row["fid"] or 0), disabled=True, key=f"fid_bloq_{row['fid']}")
-          st.text_input("Serie", value=str(row["serie"] or ""), key=f"ser_{row['fid']}")
-          st.text_input("Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}")
-          st.number_input("Latitud", format="%.6f", value=float(row["latitud"] or 21.8853), key=f"lat_{row['fid']}")
-          st.number_input("Coordenada X", format="%.2f", key=x_key)
-          st.number_input("Coordenada X Anterior", format="%.2f", key=ant_x_key)
+        ic1, ic2 = st.columns(2)
+        with ic1:
+          st.text_input(
+              "FID",
+              value=str(row["fid"] or 0),
+              disabled=True,
+              key=f"fid_bloq_{row['fid']}",
+          )
+          st.text_input(
+              "Serie",
+              value=str(row["serie"] or ""),
+              key=f"ser_{row['fid']}",
+          )
+          st.text_input(
+              "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
+          )
+          st.number_input(
+              "Latitud",
+              format="%.6f",
+              value=float(row["latitud"] or 21.8853),
+              key=f"lat_{row['fid']}",
+          )
+          st.number_input(
+              "Precisión GPS",
+              value=float(row["precisionGps"] or 0.0),
+              key=f"prec_{row['fid']}",
+          )
+          st.checkbox(
+              "Activo",
+              value=bool(row["activo"]),
+              key=f"act_{row['fid']}",
+          )
+          st.number_input(
+              "Coordenada X",
+              format="%.2f",
+              key=x_key,
+          )
+          st.number_input(
+              "Coordenada X Anterior",
+              format="%.2f",
+              key=ant_x_key,
+          )
 
-        with c2:
-          st.text_input("Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}")
-          st.number_input("Toma", value=int(row["toma"] or 0), key=f"tom_{row['fid']}")
-          st.text_input("Colonia", value=str(row["colonia"] or ""), key=f"col_{row['fid']}")
-          st.number_input("Longitud", format="%.6f", value=float(row["longitud"] or -102.2916), key=f"lon_{row['fid']}")
-          st.number_input("Coordenada Y", format="%.3f", key=y_key)
-          st.number_input("Coordenada Y Anterior", format="%.3f", key=ant_y_key)
+        with ic2:
+          st.text_input(
+              "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
+          )
+          st.number_input(
+              "Toma",
+              value=int(row["toma"] or 0),
+              key=f"tom_{row['fid']}",
+          )
+          st.text_input(
+              "Colonia",
+              value=str(row["colonia"] or ""),
+              key=f"col_{row['fid']}",
+          )
+          st.number_input(
+              "Longitud",
+              format="%.6f",
+              value=float(row["longitud"] or -102.2916),
+              key=f"lon_{row['fid']}",
+          )
+          st.checkbox(
+              "Ajuste Manual",
+              key=ajust_key,
+          )
+          st.text_input(
+              "Predio_Viv",
+              value=str(row["Predio_Viv"] or ""),
+              key=f"pviv_{row['fid']}",
+          )
+          st.number_input(
+              "Coordenada Y",
+              format="%.3f",
+              key=y_key,
+          )
+          st.number_input(
+              "Coordenada Y Anterior",
+              format="%.3f",
+              key=ant_y_key,
+          )
 
-        with c3:
-          st.text_input("Predio_Viv", value=str(row["Predio_Viv"] or ""), key=f"pviv_{row['fid']}")
-          st.number_input("Precisión GPS", value=float(row["precisionGps"] or 0.0), key=f"prec_{row['fid']}")
-          
-          # Campos de fechas y usuario agregados
-          f_reg_formatted = formatear_fecha_str(row["fechaRegistro"])
-          f_mod_formatted = formatear_fecha_str(row["fechaModificacion"])
-          
-          st.text_input("Fecha Registro", value=f_reg_formatted, disabled=True, key=f"freg_{row['fid']}")
-          st.text_input("Fecha Modificación", value=f_mod_formatted, disabled=True, key=f"fmod_{row['fid']}")
-          st.text_input("Usuario Nombre", value=str(row["usuarioNombre"] or ""), key=f"usunom_{row['fid']}")
-
-        with c4:
-          st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
-          st.checkbox("Activo", value=bool(row["activo"]), key=f"act_{row['fid']}")
-          st.checkbox("Ajuste Manual", key=ajust_key)
-
-        st.text_area("Observaciones", value=str(row["observaciones"] or ""), key=f"obs_{row['fid']}", height=80)
+        st.text_area(
+            "Observaciones",
+            value=str(row["observaciones"] or ""),
+            key=f"obs_{row['fid']}",
+        )
 
       with col_map_right:
         st.markdown(
@@ -774,7 +828,7 @@ if st.session_state.active_tab == "⚙️ Editar":
           st_folium(
               m_ed,
               width="100%",
-              height=520,
+              height=540,
               key=map_key,
               returned_objects=["last_clicked"],
           )
@@ -844,8 +898,8 @@ if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_f
                           domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
                           longitud = :longitud, "precisionGps" = :precisionGps, 
                           "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                          "usuarioNombre" = :usuarioNombre, activo = :activo, 
-                          "Predio_Viv" = :Predio_Viv, "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                          activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                          "Latitud" = :Latitud, "Longitud" = :Longitud, 
                           "fechaModificacion" = :fechaModificacion, 
                           {geom_ant_sql}
                           geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
@@ -866,7 +920,6 @@ if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_f
             "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
             "ajusteManual": bool(st.session_state.get(ajust_key, bool(row_first["ajusteManual"]))),
             "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
-            "usuarioNombre": st.session_state.get(f"usunom_{e_fid}", str(row_first["usuarioNombre"] or "")) or None,
             "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
             "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
             "Latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
