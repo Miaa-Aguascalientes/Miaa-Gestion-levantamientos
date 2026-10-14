@@ -1109,13 +1109,15 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
+  # Mapa 3D de Ubicación de Medidores
   st.markdown(
       "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
+  # Incluimos "ajusteManual" en el SELECT
   df_map_3d, err_map_3d = obtener_datos("""
-        SELECT fid, "medidorId", ST_X(geom) as lon, ST_Y(geom) as lat 
+        SELECT fid, "medidorId", "ajusteManual", ST_X(geom) as lon, ST_Y(geom) as lat 
         FROM "Usuarios"."levantamientos" 
         WHERE geom IS NOT NULL 
         LIMIT 1000
@@ -1126,10 +1128,15 @@ if st.session_state.active_tab == "📊 Dashboard General":
     for _, r in df_map_3d.iterrows():
       if pd.notna(r["lon"]) and pd.notna(r["lat"]):
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
+        
+        # Si tiene ajuste manual es Rojo, de lo contrario es Cian
+        color_punto = [255, 0, 0, 220] if r.get("ajusteManual") == True else [0, 229, 255, 200]
+        
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
             "elevation": 30,
-            "color": [0, 229, 255, 200],
+            "color": color_punto,
+            "medidorId": r["medidorId"],
         })
 
     view_state = pdk.ViewState(
