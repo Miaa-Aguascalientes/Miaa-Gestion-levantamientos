@@ -1115,12 +1115,14 @@ if st.session_state.active_tab == "📊 Dashboard General":
       unsafe_allow_html=True,
   )
 
-  # Incluimos "ajusteManual" en el SELECT
+  # Ordenamos para asegurar que los registros con ajusteManual se carguen primero y no queden fuera por el LIMIT
   df_map_3d, err_map_3d = obtener_datos("""
-        SELECT fid, "medidorId", "ajusteManual", ST_X(geom) as lon, ST_Y(geom) as lat 
+        SELECT fid, "medidorId", COALESCE("ajusteManual", FALSE) as "ajusteManual", 
+               ST_X(geom) as lon, ST_Y(geom) as lat 
         FROM "Usuarios"."levantamientos" 
         WHERE geom IS NOT NULL 
-        LIMIT 1000
+        ORDER BY "ajusteManual" DESC, fid ASC
+        LIMIT 5000
     """)
 
   if not err_map_3d and not df_map_3d.empty:
@@ -1129,14 +1131,19 @@ if st.session_state.active_tab == "📊 Dashboard General":
       if pd.notna(r["lon"]) and pd.notna(r["lat"]):
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
         
-        # Si tiene ajuste manual es Rojo, de lo contrario es Cian
-        color_punto = [255, 0, 0, 220] if r.get("ajusteManual") == True else [0, 229, 255, 200]
+        # Validar de forma segura si el campo es True (Booleano o String)
+        es_ajuste = str(r.get("ajusteManual")).strip().lower() in ["true", "1", "t"]
+        
+        # Naranja neón [255, 140, 0] para Ajuste Manual, Cian [0, 229, 255] para normales
+        color_punto = [255, 140, 0, 255] if es_ajuste else [0, 229, 255, 180]
+        altura = 60 if es_ajuste else 30  # Le damos un poco más de altura a los naranjas para que sobresalgan
         
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
-            "elevation": 30,
+            "elevation": altura,
             "color": color_punto,
             "medidorId": r["medidorId"],
+            "ajuste": "Sí" if es_ajuste else "No",
         })
 
     view_state = pdk.ViewState(
@@ -1149,7 +1156,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
         get_position="position",
         get_elevation="elevation",
         elevation_scale=1,
-        radius=3,
+        radius=4,
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
@@ -1158,7 +1165,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
     r_deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
-        tooltip={"text": "Medidor ID: {medidorId}"},
+        tooltip={"text": "Medidor ID: {medidorId}\nAjuste Manual: {ajuste}"},
         map_style=pdk.map_styles.DARK,
     )
     st.pydeck_chart(r_deck)
