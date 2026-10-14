@@ -544,7 +544,7 @@ with st.sidebar:
       unsafe_allow_html=True,
   )
 
-  opciones_menu = ["⚙️ Editar"]
+  opciones_menu = ["⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
 
   if (
       "active_tab" not in st.session_state
@@ -846,11 +846,8 @@ if st.session_state.active_tab == "⚙️ Editar":
                 st.session_state[x_key] != new_x
                 or st.session_state[y_key] != new_y
             ):
-              # Respaldar la posición actual como anterior antes de cambiarla
               st.session_state[ant_x_key] = st.session_state[x_key]
               st.session_state[ant_y_key] = st.session_state[y_key]
-              
-              # Asignar la nueva posición
               st.session_state[x_key] = new_x
               st.session_state[y_key] = new_y
               st.rerun()
@@ -876,7 +873,6 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=y_key,
           )
 
-        # Campos de coordenadas anteriores vinculados al session state para reflejar los cambios instantáneamente
         c_ant1, c_ant2 = st.columns(2)
         with c_ant1:
           st.number_input(
@@ -969,7 +965,6 @@ if st.session_state.active_tab == "⚙️ Editar":
               },
           )
 
-          # Limpiamos el session state de las coordenadas para forzar la lectura fresca de la BD
           for k in [x_key, y_key, ant_x_key, ant_y_key]:
             if k in st.session_state:
               del st.session_state[k]
@@ -1040,7 +1035,129 @@ if st.session_state.active_tab == "⚙️ Editar":
   else:
     st.info("No se encontró ningún registro para editar.")
 
-# 09 -------------------------------------------------------------------------------------- PIE DE PÁGINA --------------------------------------------------------------------------------------------------
+
+# 09 ----------------------------------------------------------------------------------- ZONA: AJUSTES MANUALES ---------------------------------------------------------------------------------------------
+elif st.session_state.active_tab == "🛠️ Ajustes Manuales":
+  st.markdown(
+      """
+      <div style="margin-bottom: 20px;">
+          <h2 style="color: #00E5FF; font-size: 1.4rem; font-weight: 700; margin-bottom: 5px;">🛠️ Registros con Ajuste Manual</h2>
+          <p style="color: #94A3B8; font-size: 0.9rem;">Listado completo de predios que han sido modificados o ajustados manualmente.</p>
+      </div>
+      """,
+      unsafe_allow_html=True,
+  )
+
+  query_manuales = f"""
+        SELECT {COLUMNAS_LEV} 
+        FROM "Usuarios"."levantamientos" 
+        WHERE "ajusteManual" = TRUE 
+        ORDER BY fid
+    """
+  df_manuales, err_man = obtener_datos(query_manuales)
+
+  if err_man:
+    st.error(f"Error al obtener los registros: {err_man}")
+  elif df_manuales.empty:
+    st.info("No se encontró ningún registro con ajuste manual activo.")
+  else:
+    st.success(f"Se encontraron {len(df_manuales)} registros con ajuste manual.")
+    
+    # Mostrar tabla limpia con columnas clave
+    df_mostrar = df_manuales[[
+        "fid", "medidorId", "serie", "toma", "domicilio", "colonia", 
+        "coord_x", "coord_y", "coord_ant_x", "coord_ant_y", "fechaModificacion"
+    ]].copy()
+    
+    df_mostrar = formatear_columnas_fecha(df_mostrar)
+    st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+
+
+# 10 ----------------------------------------------------------------------------------- ZONA: SERIES DUPLICADAS ---------------------------------------------------------------------------------------------
+elif st.session_state.active_tab == "⚠️ Series Duplicadas":
+  st.markdown(
+      """
+      <div style="margin-bottom: 20px;">
+          <h2 style="color: #00E5FF; font-size: 1.4rem; font-weight: 700; margin-bottom: 5px;">⚠️ Control de Series Duplicadas</h2>
+          <p style="color: #94A3B8; font-size: 0.9rem;">Detección de números de serie repetidos y herramienta para eliminar duplicados dejando solo un registro.</p>
+      </div>
+      """,
+      unsafe_allow_html=True,
+  )
+
+  query_duplicados = """
+        SELECT {cols} 
+        FROM "Usuarios"."levantamientos" 
+        WHERE serie IS NOT NULL AND TRIM(serie) != '' AND serie IN (
+            SELECT serie 
+            FROM "Usuarios"."levantamientos" 
+            WHERE serie IS NOT NULL AND TRIM(serie) != '' 
+            GROUP BY serie 
+            HAVING COUNT(*) > 1
+        )
+        ORDER BY serie, fid
+    """.format(cols=COLUMNAS_LEV)
+
+  df_dups, err_dup = obtener_datos(query_duplicados)
+
+  if err_dup:
+    st.error(f"Error al consultar duplicados: {err_dup}")
+  elif df_dups.empty:
+    st.success("¡Excelente! No hay números de serie duplicados en la base de datos.")
+  else:
+    total_duplicados = len(df_dups)
+    series_unicas = df_dups["serie"].nunique()
+    
+    st.warning(f"Se encontraron **{total_duplicados} registros** distribuidos en **{series_unicas} números de serie** repetidos.")
+
+    col_btn_limpiar, col_info_limp = st.columns([1.5, 3])
+    with col_btn_limpiar:
+      if st.button("🧹 Eliminar Duplicados (Conservar el menor FID)", use_container_width=True):
+        try:
+          # Consulta SQL para eliminar duplicados conservando el de menor fid por cada serie
+          sql_delete_dups = """
+                        DELETE FROM "Usuarios"."levantamientos" 
+                        WHERE fid NOT IN (
+                            SELECT MIN(fid) 
+                            FROM "Usuarios"."levantamientos" 
+                            WHERE serie IS NOT NULL AND TRIM(serie) != '' 
+                            GROUP BY serie
+                        ) AND serie IN (
+                            SELECT serie 
+                            FROM "Usuarios"."levantamientos" 
+                            WHERE serie IS NOT NULL AND TRIM(serie) != '' 
+                            GROUP BY serie 
+                            HAVING COUNT(*) > 1
+                        )
+                    """
+          ejecutar_sql(sql_delete_dups)
+          st.success("¡Duplicados eliminados correctamente! Se ha conservado únicamente el registro original (menor FID) por cada serie.")
+          t.sleep(1.5)
+          st.rerun()
+        except Exception as e_del_dup:
+          st.error(f"Error al eliminar duplicados: {e_del_dup}")
+
+    with col_info_limp:
+      st.markdown(
+          "<p style='color: #94A3B8; font-size: 0.85rem; margin-top: 10px;'>"
+          "Nota: Al hacer clic en limpiar, el sistema mantendrá el registro con el <b>FID más bajo</b> de cada serie repetida y borrará los demás."
+          "</p>",
+          unsafe_allow_html=True,
+      )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #00E5FF; font-size: 1.1rem;'>Detalle de Registros Duplicados:</h4>", unsafe_allow_html=True)
+    
+    df_mostrar_dup = df_dups[[
+        "fid", "medidorId", "serie", "toma", "domicilio", "colonia", 
+        "fechaRegistro", "activo"
+    ]].copy()
+    
+    df_mostrar_dup = formatear_columnas_fecha(df_mostrar_dup)
+    st.dataframe(df_mostrar_dup, use_container_width=True, hide_index=True)
+
+
+# 11 -------------------------------------------------------------------------------------- PIE DE PÁGINA --------------------------------------------------------------------------------------------------
 st.markdown(
     """
     <div style="text-align: center; color: #94A3B8; font-size: 0.8rem; margin-top: 30px;">
