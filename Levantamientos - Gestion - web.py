@@ -412,37 +412,20 @@ st.write(
         padding-bottom: 6px !important;
     }
 
-    /* Animaciones y Estilos Dinámicos para el Login */
     @keyframes fadeInSlide {
-        0% {
-            opacity: 0;
-            transform: translateY(25px) scale(0.98);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+        0% { opacity: 0; transform: translateY(25px) scale(0.98); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     @keyframes pulseGlow {
-        0% {
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
-        }
-        50% {
-            box-shadow: 0 0 30px rgba(0, 229, 255, 0.35);
-        }
-        100% {
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
-        }
+        0% { box-shadow: 0 0 15px rgba(0, 229, 255, 0.1); }
+        50% { box-shadow: 0 0 30px rgba(0, 229, 255, 0.35); }
+        100% { box-shadow: 0 0 15px rgba(0, 229, 255, 0.1); }
     }
 
     @keyframes floatLogo {
-        0%, 100% {
-            transform: translateY(0px);
-        }
-        50% {
-            transform: translateY(-6px);
-        }
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
     }
 
     .login-container-animated {
@@ -519,13 +502,7 @@ if not st.session_state.autenticado:
     st.markdown("</div>", unsafe_allow_html=True)
   st.stop()
 
-# 05.1. SECCION ------------------------------------------------------------- DETERMINAR ROL DEL USUARIO -----------------------------------------------------------------------------------------------------------
 es_operador = st.session_state.get("tipo_usuario", "") == "operador"
-
-# Variables temporales para el guardado global desde el sidebar
-trigger_actualizar = False
-trigger_eliminar = False
-fid_a_actualizar = None
 
 # 07 SECCION ------------------------------------------------------------------------ CABECERA PRINCIPAL ---------------------------------------------------------------------------------------------------------
 st.markdown(
@@ -551,6 +528,9 @@ COLUMNAS_LEV = """
 """
 
 # 08 -------------------------------------------------------------------------------------- EDITAR Y ELIMINAR ----------------------------------------------------------------------------------------------
+
+df_lev = pd.DataFrame()
+row_first = None
 
 if st.session_state.active_tab == "⚙️ Editar":
   busqueda_edit = st.session_state.get("busqueda_edit_val", "")
@@ -608,8 +588,6 @@ if st.session_state.active_tab == "⚙️ Editar":
       )
 
     for idx, row in df_lev.iterrows():
-      e_fid = row["fid"]
-      fid_a_actualizar = e_fid
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
@@ -644,7 +622,6 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[x_key] = new_x
           st.session_state[y_key] = new_y
 
-      # Layout principal: Izquierda con todos los campos organizados en 2 columnas, Derecha con el mapa grande
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
@@ -656,83 +633,83 @@ if st.session_state.active_tab == "⚙️ Editar":
               disabled=True,
               key=f"fid_bloq_{row['fid']}",
           )
-          e_serie = st.text_input(
+          st.text_input(
               "Serie",
               value=str(row["serie"] or ""),
               key=f"ser_{row['fid']}",
           )
-          e_domicilio = st.text_input(
+          st.text_input(
               "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
           )
-          e_latitud = st.number_input(
+          st.number_input(
               "Latitud",
               format="%.6f",
               value=float(row["latitud"] or 21.8853),
               key=f"lat_{row['fid']}",
           )
-          e_precision = st.number_input(
+          st.number_input(
               "Precisión GPS",
               value=float(row["precisionGps"] or 0.0),
               key=f"prec_{row['fid']}",
           )
-          e_activo = st.checkbox(
+          st.checkbox(
               "Activo",
               value=bool(row["activo"]),
               key=f"act_{row['fid']}",
           )
-          e_coord_x = st.number_input(
+          st.number_input(
               "Coordenada X",
               format="%.2f",
               key=x_key,
           )
-          e_coord_ant_x = st.number_input(
+          st.number_input(
               "Coordenada X Anterior",
               format="%.2f",
               key=ant_x_key,
           )
 
         with ic2:
-          e_medidor_id = st.text_input(
+          st.text_input(
               "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
           )
-          e_toma = st.number_input(
+          st.number_input(
               "Toma",
               value=int(row["toma"] or 0),
               key=f"tom_{row['fid']}",
           )
-          e_colonia = st.text_input(
+          st.text_input(
               "Colonia",
               value=str(row["colonia"] or ""),
               key=f"col_{row['fid']}",
           )
-          e_longitud = st.number_input(
+          st.number_input(
               "Longitud",
               format="%.6f",
               value=float(row["longitud"] or -102.2916),
               key=f"lon_{row['fid']}",
           )
-          e_ajuste = st.checkbox(
+          st.checkbox(
               "Ajuste Manual",
               value=bool(row["ajusteManual"]),
               key=f"ajust_{row['fid']}",
           )
-          e_predio_viv = st.text_input(
+          st.text_input(
               "Predio_Viv",
               value=str(row["Predio_Viv"] or ""),
               key=f"pviv_{row['fid']}",
           )
-          e_coord_y = st.number_input(
+          st.number_input(
               "Coordenada Y",
               format="%.3f",
               key=y_key,
           )
-          e_coord_ant_y = st.number_input(
+          st.number_input(
               "Coordenada Y Anterior",
               format="%.3f",
               key=ant_y_key,
           )
 
-        e_observaciones = st.text_area(
+        st.text_area(
             "Observaciones",
             value=str(row["observaciones"] or ""),
             key=f"obs_{row['fid']}",
@@ -843,8 +820,7 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
-  # Botones de Acción en la Barra Lateral (Solo visibles en la pestaña Editar)
-  if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty:
+  if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_first is not None:
     st.markdown(
         "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
         unsafe_allow_html=True,
@@ -857,10 +833,9 @@ with st.sidebar:
 
     if st.button("💾 Actualizar Registro", key="btn_act_sidebar", use_container_width=True):
       try:
-        row_act = df_lev.iloc[0]
-        e_fid = row_act["fid"]
-        default_x = float(row_act["coord_x"]) if pd.notna(row_act["coord_x"]) else 0.0
-        default_y = float(row_act["coord_y"]) if pd.notna(row_act["coord_y"]) else 0.0
+        e_fid = int(row_first["fid"])
+        default_x = float(row_first["coord_x"]) if pd.notna(row_first["coord_x"]) else 0.0
+        default_y = float(row_first["coord_y"]) if pd.notna(row_first["coord_y"]) else 0.0
 
         x_key = f"coord_x_input_{e_fid}"
         y_key = f"coord_y_input_{e_fid}"
@@ -869,10 +844,10 @@ with st.sidebar:
 
         fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
         
-        nuevo_x = st.session_state.get(x_key, default_x)
-        nuevo_y = st.session_state.get(y_key, default_y)
-        nuevo_ant_x = st.session_state.get(ant_x_key, 0.0)
-        nuevo_ant_y = st.session_state.get(ant_y_key, 0.0)
+        nuevo_x = float(st.session_state.get(x_key, default_x))
+        nuevo_y = float(st.session_state.get(y_key, default_y))
+        nuevo_ant_x = float(st.session_state.get(ant_x_key, 0.0))
+        nuevo_ant_y = float(st.session_state.get(ant_y_key, 0.0))
         
         hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
         
@@ -894,20 +869,20 @@ with st.sidebar:
 
         params_sql = {
             "fid": e_fid,
-            "medidorId": st.session_state.get(f"medid_{e_fid}", str(row_act["medidorId"] or "")).strip(),
-            "serie": st.session_state.get(f"ser_{e_fid}", str(row_act["serie"] or "")) or None,
-            "toma": st.session_state.get(f"tom_{e_fid}", int(row_act["toma"] or 0)),
-            "domicilio": st.session_state.get(f"dom_{e_fid}", str(row_act["domicilio"] or "")) or None,
-            "colonia": st.session_state.get(f"col_{e_fid}", str(row_act["colonia"] or "")) or None,
-            "latitud": st.session_state.get(f"lat_{e_fid}", float(row_act["latitud"] or 21.8853)),
-            "longitud": st.session_state.get(f"lon_{e_fid}", float(row_act["longitud"] or -102.2916)),
-            "precisionGps": st.session_state.get(f"prec_{e_fid}", float(row_act["precisionGps"] or 0.0)),
-            "ajusteManual": st.session_state.get(f"ajust_{e_fid}", bool(row_act["ajusteManual"])),
-            "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_act["observaciones"] or "")) or None,
-            "activo": st.session_state.get(f"act_{e_fid}", bool(row_act["activo"])),
-            "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_act["Predio_Viv"] or "")) or None,
-            "Latitud": st.session_state.get(f"lat_{e_fid}", float(row_act["latitud"] or 21.8853)),
-            "Longitud": st.session_state.get(f"lon_{e_fid}", float(row_act["longitud"] or -102.2916)),
+            "medidorId": st.session_state.get(f"medid_{e_fid}", str(row_first["medidorId"] or "")).strip(),
+            "serie": st.session_state.get(f"ser_{e_fid}", str(row_first["serie"] or "")) or None,
+            "toma": int(st.session_state.get(f"tom_{e_fid}", int(row_first["toma"] or 0))),
+            "domicilio": st.session_state.get(f"dom_{e_fid}", str(row_first["domicilio"] or "")) or None,
+            "colonia": st.session_state.get(f"col_{e_fid}", str(row_first["colonia"] or "")) or None,
+            "latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
+            "longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
+            "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
+            "ajusteManual": bool(st.session_state.get(f"ajust_{e_fid}", bool(row_first["ajusteManual"]))),
+            "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
+            "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
+            "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
+            "Latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
+            "Longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
             "fechaModificacion": fecha_mod_str,
             "coord_x": nuevo_x,
             "coord_y": nuevo_y,
@@ -940,7 +915,7 @@ with st.sidebar:
           if st.button("Sí, borrar", key="btn_yes_del", use_container_width=True):
             if confirm_text.strip() == "delete":
               try:
-                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid', {"fid": row_first["fid"]})
+                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid', {"fid": int(row_first["fid"])})
                 st.session_state.registro_to_delete = None
                 st.success("Registro eliminado.")
                 t.sleep(1)
