@@ -152,7 +152,7 @@ def ejecutar_sql(query, params=None):
 
 # 03 SECCION ------------------------------------------------------------------- CONEXIÓN A MYSQL (USUARIOS / LOGIN) --------------------------------------------------------------------------------------------------
 def crear_engine_mysql():
-  mysql_sec = st.secrets["mysql_usuarios_vrp"]
+  mysql_sec = st.secrets["mysql_usuarios_levantamientos"]
   db_url = f"mysql+pymysql://{mysql_sec['user']}:{mysql_sec['password']}@{mysql_sec['host']}:{mysql_sec['port']}/{mysql_sec['database']}"
   return create_engine(
       db_url,
