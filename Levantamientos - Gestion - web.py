@@ -1109,20 +1109,20 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-  # Mapa 3D de Ubicación de Medidores
+ # Mapa de Ubicación de Medidores (Optimizado para 60k+ puntos)
   st.markdown(
       "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
-  # Ordenamos para asegurar que los registros con ajusteManual se carguen primero y no queden fuera por el LIMIT
+  # Consultamos los puntos necesarios ordenando los de ajuste manual al inicio
   df_map_3d, err_map_3d = obtener_datos("""
         SELECT fid, "medidorId", COALESCE("ajusteManual", FALSE) as "ajusteManual", 
                ST_X(geom) as lon, ST_Y(geom) as lat 
         FROM "Usuarios"."levantamientos" 
         WHERE geom IS NOT NULL 
         ORDER BY "ajusteManual" DESC, fid ASC
-        LIMIT 5000
+        LIMIT 70000
     """)
 
   if not err_map_3d and not df_map_3d.empty:
@@ -1131,35 +1131,36 @@ if st.session_state.active_tab == "📊 Dashboard General":
       if pd.notna(r["lon"]) and pd.notna(r["lat"]):
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
         
-        # Validar de forma segura si el campo es True (Booleano o String)
+        # Validar de forma segura si el campo es True
         es_ajuste = str(r.get("ajusteManual")).strip().lower() in ["true", "1", "t"]
         
         # Naranja neón [255, 140, 0] para Ajuste Manual, Cian [0, 229, 255] para normales
-        color_punto = [255, 140, 0, 255] if es_ajuste else [0, 229, 255, 180]
-        altura = 60 if es_ajuste else 30  # Le damos un poco más de altura a los naranjas para que sobresalgan
+        color_punto = [255, 140, 0, 220] if es_ajuste else [0, 229, 255, 140]
         
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
-            "elevation": altura,
             "color": color_punto,
             "medidorId": r["medidorId"],
             "ajuste": "Sí" if es_ajuste else "No",
         })
 
     view_state = pdk.ViewState(
-        latitude=21.8853, longitude=-102.2916, zoom=14, pitch=45, bearing=0
+        latitude=21.8853, longitude=-102.2916, zoom=13, pitch=30, bearing=0
     )
 
+    # Reemplazamos ColumnLayer por ScatterplotLayer para alto rendimiento con miles de puntos
     layer = pdk.Layer(
-        "ColumnLayer",
+        "ScatterplotLayer",
         data=puntos_3d,
         get_position="position",
-        get_elevation="elevation",
-        elevation_scale=1,
-        radius=4,
+        get_radius=12,  # Radio del punto en metros
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
+        stroked=True,
+        filled=True,
+        radius_min_pixels=2,
+        radius_max_pixels=10,
     )
 
     r_deck = pdk.Deck(
@@ -1170,7 +1171,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
     )
     st.pydeck_chart(r_deck)
   else:
-    st.info("No hay geometrías disponibles para renderizar el mapa 3D.")
+    st.info("No hay geometrías disponibles para renderizar el mapa.")
 
 
 # 09 ----------------------------------------------------------------------------------- ZONA: AJUSTES MANUALES ---------------------------------------------------------------------------------------------
