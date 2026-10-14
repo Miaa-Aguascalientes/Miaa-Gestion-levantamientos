@@ -4,7 +4,7 @@ import datetime
 import time as t
 from zoneinfo import ZoneInfo
 import folium
-from folium.plugins import Fullscreen, MarkerCluster
+from folium.plugins import Fullscreen, FastMarkerCluster
 import pandas as pd
 import pydeck as pdk
 from pyproj import Transformer
@@ -205,7 +205,7 @@ def agregar_capas_base_mapa(m):
       checked=False,
   ).add_to(m)
 
-  # Botón de control para alternar capas en la esquina superior
+  # Botón de control de capas en la esquina superior
   folium.LayerControl().add_to(m)
 
 # 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
@@ -720,7 +720,7 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      # Se respeta la proporción [1.1, 1.2] para que el mapa conserve su ancho original y los inputs se dividan en 3 columnas
+      # Se respeta la proporción original del mapa [1.1, 1.2] y se dividen los inputs en 3 columnas
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
@@ -1015,7 +1015,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
       """
       <div style="margin-bottom: 12px;">
           <h2 style="color: #00E5FF; font-size: 1.3rem; font-weight: 800; margin-bottom: 2px;">📊 Dashboard General de Levantamientos</h2>
-          <p style="color: #94A3B8; font-size: 0.85rem;">Resumen estadístico, gráficos de instalaciones y mapa 3D de ubicación.</p>
+          <p style="color: #94A3B8; font-size: 0.85rem;">Resumen estadístico, gráficos de instalaciones y mapa general de ubicación.</p>
       </div>
       """,
       unsafe_allow_html=True,
@@ -1123,65 +1123,44 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-  # Mapa de Ubicación de Medidores (Optimizado para 60k+ puntos con ScatterplotLayer y puntos de ajuste manual en naranja)
+  # Mapa General con Folium, selector de capas y optimizado para 60k+ puntos
   st.markdown(
       "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
-  df_map_3d, err_map_3d = obtener_datos("""
+  df_map_folium, err_map_folium = obtener_datos("""
         SELECT fid, "medidorId", COALESCE("ajusteManual", FALSE) as "ajusteManual", 
                ST_X(geom) as lon, ST_Y(geom) as lat 
         FROM "Usuarios"."levantamientos" 
         WHERE geom IS NOT NULL 
-        ORDER BY "ajusteManual" DESC, fid ASC
         LIMIT 70000
     """)
 
-  if not err_map_3d and not df_map_3d.empty:
-    puntos_3d = []
-    for _, r in df_map_3d.iterrows():
+  if not err_map_folium and not df_map_folium.empty:
+    m_dash = folium.Map(
+        location=[21.8853, -102.2916], zoom_start=13, control_scale=True
+    )
+
+    # Agrega las capas base de Satélite con calles y OpenStreetMap con su menú de control
+    agregar_capas_base_mapa(m_dash)
+    Fullscreen().add_to(m_dash)
+
+    coordenadas_pins = []
+    for _, r in df_map_folium.iterrows():
       if pd.notna(r["lon"]) and pd.notna(r["lat"]):
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
-        
-        es_ajuste = str(r.get("ajusteManual")).strip().lower() in ["true", "1", "t"]
-        
-        color_punto = [255, 120, 0, 255] if es_ajuste else [0, 229, 255, 140]
-        radio_punto = 25 if es_ajuste else 10
-        
-        puntos_3d.append({
-            "position": [lon_wgs, lat_wgs],
-            "color": color_punto,
-            "radius": radio_punto,
-            "medidorId": r["medidorId"],
-            "ajuste": "Sí" if es_ajuste else "No",
-        })
+        coordenadas_pins.append([lat_wgs, lon_wgs])
 
-    view_state = pdk.ViewState(
-        latitude=21.8853, longitude=-102.2916, zoom=13, pitch=30, bearing=0
-    )
+    # FastMarkerCluster permite renderizar y agrupar miles de puntos fluidamente
+    FastMarkerCluster(
+        data=coordenadas_pins,
+        options={
+            "disableClusteringAtZoom": 17,
+        }
+    ).add_to(m_dash)
 
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=puntos_3d,
-        get_position="position",
-        get_radius="radius",
-        get_fill_color="color",
-        pickable=True,
-        auto_highlight=True,
-        stroked=True,
-        filled=True,
-        radius_min_pixels=2,
-        radius_max_pixels=12,
-    )
-
-    r_deck = pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "Medidor ID: {medidorId}\nAjuste Manual: {ajuste}"},
-        map_style=pdk.map_styles.DARK,
-    )
-    st.pydeck_chart(r_deck)
+    st_folium(m_dash, width="100%", height=540, key="mapa_dashboard_general")
   else:
     st.info("No hay geometrías disponibles para renderizar el mapa.")
 
