@@ -1,4 +1,4 @@
-# VRP - Registros.py
+# Levantamientos - Gestión de Predios (MIAA)
 import base64
 import datetime
 import time as t
@@ -14,7 +14,7 @@ from streamlit_folium import st_folium
 # Configuración de página
 st.set_page_config(
     layout="wide",
-    page_title="Gestión Válvulas Reductoras de Presión - MIAA",
+    page_title="Gestión Levantamientos de Predios - MIAA",
     page_icon="https://www.miaa.mx/favicon.ico",
 )
 
@@ -39,18 +39,7 @@ transformer_to_utm = Transformer.from_crs(
     "EPSG:4326", "EPSG:32613", always_xy=True
 )
 
-OPCIONES_ESTADO_VALVULA = [
-    "Abierta",
-    "Calibrada",
-    "Cerrada",
-    "Dañada",
-    "Descalibrada",
-    "Habilitada",
-    "No opera",
-    "Pendiente",
-]
-
-COLUMNAS_FECHA = ["fecha_inst", "fecha_vis", "fecha_mtto", "fecha_tim", "_ult_visita"]
+COLUMNAS_FECHA = ["fechaRegistro", "fechaModificacion", "_Ult_actualizacion"]
 
 def parsear_fecha_segura(val_fecha):
   if (
@@ -100,7 +89,7 @@ def formatear_columnas_fecha(df):
       df_copia[col] = df_copia[col].apply(formatear_fecha_str)
   return df_copia
 
-# 02 SECCION -------------------------------------------------------------------------- CONEXIÓN A BASE DE DATOS POSTGRESQL (VRP_Oficial) --------------------------------------------------------------------------------------
+# 02 SECCION -------------------------------------------------------------------------- CONEXIÓN A BASE DE DATOS POSTGRESQL (Esquema Usuarios, Tabla levantamientos) --------------------------------------------------------------------------------------
 
 def crear_nuevo_engine():
   pg = st.secrets["postgres"]
@@ -190,20 +179,6 @@ def obtener_datos_mysql(query, params=None):
         if intento == 1:
           return pd.DataFrame(), str(e2)
   return pd.DataFrame(), "Error de conexión persistente a MySQL."
-
-def procesar_bytes_foto(foto_data):
-  if foto_data is None:
-    return None
-  if isinstance(foto_data, memoryview):
-    return bytes(foto_data)
-  if isinstance(foto_data, bytes):
-    return foto_data
-  if isinstance(foto_data, str) and len(foto_data) > 10:
-    try:
-      return base64.b64decode(foto_data)
-    except:
-      return None
-  return None
 
 def agregar_capas_base_mapa(m):
   folium.TileLayer(
@@ -437,14 +412,6 @@ st.write(
         padding-bottom: 6px !important;
     }
 
-    [data-testid="stCameraInput"] video, 
-    [data-testid="stCameraInput"] img {
-        width: 100% !important;
-        max-width: 640px !important;
-        height: auto !important;
-        border-radius: 8px !important;
-    }
-
     /* Animaciones y Estilos Dinámicos para el Login */
     @keyframes fadeInSlide {
         0% {
@@ -498,7 +465,6 @@ st.write(
 
 # 05 SECCION ------------------------------------------------------------------- SISTEMA DE LOGIN CONECTADO A MYSQL -----------------------------------------------------------------------------------------------
 if not st.session_state.autenticado:
-  # Contenedor principal centrado mediante columnas de Streamlit
   _, col_centro, _ = st.columns([1, 1.4, 1])
 
   with col_centro:
@@ -508,7 +474,7 @@ if not st.session_state.autenticado:
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; margin-bottom: 25px;">
                 <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" class="login-logo-animated" style="width: 200px; height: auto; margin-bottom: 15px;" />
                 <h3 style="color: #00E5FF; font-size: 1.5rem; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.5px;">Acceso al Sistema</h3>
-                <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">Gestión de Válvulas Reductoras de Presión</p>
+                <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">Gestión de Levantamientos de Predios</p>
             </div>
         """,
         unsafe_allow_html=True,
@@ -527,7 +493,7 @@ if not st.session_state.autenticado:
         if usuario_input and password_input:
           query_login = """
                         SELECT id, usuario, tipo_usuario, departamento 
-                        FROM usuarios_vrp 
+                        FROM usuarios_miaa 
                         WHERE usuario = :usu AND password = :pas
                     """
           df_user, err_login = obtener_datos_mysql(
@@ -579,7 +545,7 @@ with st.sidebar:
   )
 
   if es_operador:
-    opciones_menu = ["📍 Registros", "🗺️ Mapa", "⚙️️ Editar"]
+    opciones_menu = ["📍 Registros", "🗺️ Mapa", "⚙ Editar"]
   else:
     opciones_menu = ["📍 Registros", "🗺️ Mapa", "➕ Añadir", "⚙️ Editar"]
 
@@ -614,54 +580,31 @@ with st.sidebar:
       unsafe_allow_html=True,
   )
 
-  df_sidebar_valvulas, _ = obtener_datos(
-      'SELECT id_0, id, estatus, domicilio, colonia FROM "Agua_potable"."VRP_Oficial"'
+  df_sidebar_levantamientos, _ = obtener_datos(
+      'SELECT fid, medidorId, serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
   )
 
-  if not df_sidebar_valvulas.empty:
+  if not df_sidebar_levantamientos.empty:
     st.markdown(
         "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
-        " margin-bottom: 16px; margin-top: 8px;'>📊 Estado de Válvulas</p>",
+        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
         unsafe_allow_html=True,
     )
 
-    ICONOS_ESTADO = {
-        "Calibrada": "🟢",
-        "Abierta": "🔵",
-        "Cerrada": "🔴",
-        "Dañada": "⛔",
-        "Descalibrada": "🟠",
-        "Habilitada": "🔷",
-        "No opera": "⚫",
-        "Pendiente": "⚠️",
-    }
+    total_predios = len(df_sidebar_levantamientos)
+    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
+    inactivos_count = total_predios - activos_count
 
-    for estado in OPCIONES_ESTADO_VALVULA:
-      df_filtro = df_sidebar_valvulas[
-          df_sidebar_valvulas["estatus"].str.strip().str.lower()
-          == estado.lower()
-      ]
-      conteo = len(df_filtro)
-      icono = ICONOS_ESTADO.get(estado, "⚪")
-
-      with st.expander(f"{icono} {estado} ({conteo})"):
-        if conteo > 0:
-          for _, v_row in df_filtro.iterrows():
-            st.markdown(
-                f"""
-                            <div style="padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.78rem;">
-                                <strong style="color: #00E5FF;">{v_row['id']}</strong><br>
-                                <span style="color: #94A3B8;">📍 {v_row['domicilio'] or 'Sin dom.'}</span>
-                            </div>
-                            """,
-                unsafe_allow_html=True,
-            )
-        else:
-          st.markdown(
-              "<span style='color: #64748B; font-size: 0.75rem;'>Sin"
-              " registros</span>",
-              unsafe_allow_html=True,
-          )
+    st.markdown(
+        f"""
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.6;">
+            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
+            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
+            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
   st.markdown("<br>", unsafe_allow_html=True)
 
@@ -674,7 +617,7 @@ with st.sidebar:
 st.markdown(
     """
     <div style="text-align: center; margin-bottom: 10px; margin-top: 0px;">
-        <h1 style="color: #00E5FF; font-size: 1.8rem; font-weight: 800; margin: 0; letter-spacing: -0.5px;">Gestión Válvulas Reductoras de Presión</h1>
+        <h1 style="color: #00E5FF; font-size: 1.8rem; font-weight: 800; margin: 0; letter-spacing: -0.5px;">Gestión de Levantamientos de Predios</h1>
     </div>
 """,
     unsafe_allow_html=True,
@@ -685,15 +628,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-COLUMNAS_VPRS = """
-    id_0, id, num_serie, fecha_inst, tipo_valv, diametro, marca, modelo, trim, 
-    control_au, domicilio, colonia, sect_hidr, distrito, cota_terr, estatus, condicion, 
-    cal_antd, cal_antn, fecha_vis, p_ab, p_arr, cal_postd, cal_postn, prog_hor, 
-    fecha_mtto, tim_cambio, fecha_tim, obs, _ult_visita, _p_ab, _p_arr, fotos, fotos_2,
+COLUMNAS_LEV = """
+    fid, medidorId, serie, toma, domicilio, colonia, latitud, longitud, precisionGps, 
+    ajusteManual, observaciones, usuarioNombre, fechaRegistro, fechaModificacion, 
+    activo, "Predio_Viv", "Latitud", "Longitud", _Ult_actualizacion,
     ST_X(geom) as coord_x, ST_Y(geom) as coord_y
 """
 
-# 08 SECCION ---------------------------------------------------------------------------- VER REGISTROS (VRP_Oficial) ------------------------------------------------------------------------------------------------
+# 08 SECCION ---------------------------------------------------------------------------- VER REGISTROS (levantamientos) ------------------------------------------------------------------------------------------------
 
 if st.session_state.active_tab == "📍 Registros":
 
@@ -731,44 +673,41 @@ if st.session_state.active_tab == "📍 Registros":
       unsafe_allow_html=True,
   )
 
-  tab_registros, tab_bd_completa, tab_sheets, tab_comparativa, tab_gestor_bd = (
-      st.tabs([
-          "📍 Registros",
-          "🗄️ Tabla Base de Datos Completa",
-          "📊 2.Informe visitas a VRP´s (Sheets)",
-          "🔍 Comparativa (BD vs Sheets)",
-          "🛠️️ Gestión BD",
-      ])
-  )
+  tab_registros, tab_bd_completa, tab_gestor_bd = st.tabs([
+      "📍 Registros",
+      "🗄️ Tabla Base de Datos Completa",
+      "🛠 Gestión BD",
+  ])
 
   with tab_registros:
     busqueda = st.text_input(
-        "🔍 Buscar válvula (ID, Num. Serie, Domicilio, Col.):",
-        placeholder="Ej. VF01, Centro...",
+        "🔍 Buscar predio (Medidor ID, Serie, Toma, Domicilio, Colonia):",
+        placeholder="Ej. MED-001, Centro...",
     )
 
     if busqueda and busqueda.strip() != "":
       filtro = f"%{busqueda.strip()}%"
       query = f"""
-                SELECT {COLUMNAS_VPRS} 
-                FROM "Agua_potable"."VRP_Oficial" 
-                WHERE id ILIKE :filtro 
-                   OR num_serie ILIKE :filtro 
+                SELECT {COLUMNAS_LEV} 
+                FROM "Usuarios"."levantamientos" 
+                WHERE medidorId ILIKE :filtro 
+                   OR serie ILIKE :filtro 
+                   OR CAST(toma AS TEXT) ILIKE :filtro
                    OR domicilio ILIKE :filtro 
                    OR colonia ILIKE :filtro 
-                ORDER BY id_0
+                ORDER BY fid
             """
-      df_vprs, error_db = obtener_datos(query, {"filtro": filtro})
+      df_lev, error_db = obtener_datos(query, {"filtro": filtro})
     else:
       query = (
-          f'SELECT {COLUMNAS_VPRS} FROM "Agua_potable"."VRP_Oficial" ORDER BY id_0'
+          f'SELECT {COLUMNAS_LEV} FROM "Usuarios"."levantamientos" ORDER BY fid'
           " LIMIT 15"
       )
-      df_vprs, error_db = obtener_datos(query)
+      df_lev, error_db = obtener_datos(query)
 
     if error_db:
       st.error(f"❌ Error al consultar PostgreSQL: {error_db}")
-    elif not df_vprs.empty:
+    elif not df_lev.empty:
       if not busqueda or busqueda.strip() == "":
         st.markdown(
             "<p style='color: #94A3B8; font-size: 0.85rem; margin-bottom:"
@@ -778,85 +717,55 @@ if st.session_state.active_tab == "📍 Registros":
       else:
         st.markdown(
             f"<p style='color: #94A3B8; font-size: 0.85rem; margin-bottom:"
-            f" 10px;'>Se encontraron {len(df_vprs)} registros.</p>",
+            f" 10px;'>Se encontraron {len(df_lev)} registros.</p>",
             unsafe_allow_html=True,
         )
 
-      for idx, row in df_vprs.iterrows():
-        serie_val = row["num_serie"]
+      for idx, row in df_lev.iterrows():
+        serie_val = row["serie"]
         serie_texto = (
             ""
             if (
                 pd.isna(serie_val)
                 or str(serie_val).strip().lower() in ["nan", "none", ""]
             )
-            else f" | Num. Serie: {serie_val}"
+            else f" | Serie: {serie_val}"
         )
+        toma_texto = f" | Toma: {row['toma']}" if pd.notna(row["toma"]) else ""
 
         card_html = f"""
                     <div class="user-card">
-                        <span style="font-size: 0.95rem; font-weight: bold; color: #F8FAFC;">ID: {row['id']}{serie_texto}</span><br>
+                        <span style="font-size: 0.95rem; font-weight: bold; color: #F8FAFC;">Medidor ID: {row['medidorId']}{serie_texto}{toma_texto}</span><br>
                         <span style="color: #00E5FF; font-size: 0.85rem;">📍 {row['domicilio'] or 'Sin domicilio'}, Col. {row['colonia'] or 'Sin colonia'}</span>
                     </div>
                 """
         st.markdown(card_html, unsafe_allow_html=True)
 
-        with st.expander("🔍 Ver detalles completos y fotografías"):
+        with st.expander("🔍 Ver detalles completos del levantamiento"):
           geom_str = (
-              f"POINT ({row['coord_x']} {row['coord_y']})"
+              f"POINT ({row['coord_x']} {row['coord_y'])})"
               if pd.notna(row["coord_x"]) and pd.notna(row["coord_y"])
               else "Sin geometría"
           )
           detalle_html = f"""
                         <span style="color: #94A3B8; font-size: 0.8rem; line-height: 1.6;">
-                            <b>Diámetro:</b> {row['diametro']} pulgadas &nbsp;|&nbsp; <b>Marca:</b> {row['marca']} &nbsp;|&nbsp; <b>Modelo:</b> {row['modelo']} &nbsp;|&nbsp; <b>Trim:</b> {row['trim']} &nbsp;|&nbsp; <b>Cota:</b> {row['cota_terr']}<br>
-                            <b>Sector:</b> {row['sect_hidr']} &nbsp;|&nbsp; <b>Estado:</b> {row['estatus']} &nbsp;|&nbsp; <b>Última Visita:</b> {formatear_fecha_str(row['fecha_vis'])}<br>
-                            <b>Fecha Inst.:</b> {formatear_fecha_str(row['fecha_inst'])} &nbsp;|&nbsp; <b>Fecha Mtto:</b> {formatear_fecha_str(row['fecha_mtto'])}<br>
-                            <b>Geom:</b> {geom_str}<br>
-                            <b>Cal Ant Día:</b> {row['cal_antd']} &nbsp;|&nbsp; <b>Cal Ant Noche:</b> {row['cal_antn']}<br>
-                            <b>Cal Post Día:</b> {row['cal_postd']} &nbsp;|&nbsp; <b>Cal Post Noche:</b> {row['cal_postn']}<br>
-                            <b>Programación Horaria (prog_hor):</b> {row['prog_hor']}<br>
-                            <b>Observaciones:</b> {row['obs']}
+                            <b>FID:</b> {row['fid']} &nbsp;|&nbsp; <b>Predio Viv:</b> {row['Predio_Viv']} &nbsp;|&nbsp; <b>Activo:</b> {row['activo']}<br>
+                            <b>Lat/Lon:</b> {row['latitud']}, {row['longitud']} &nbsp;|&nbsp; <b>Precisión GPS:</b> {row['precisionGps']} m<br>
+                            <b>Ajuste Manual:</b> {row['ajusteManual']} &nbsp;|&nbsp; <b>Usuario Levantamiento:</b> {row['usuarioNombre']}<br>
+                            <b>Fecha Registro:</b> {formatear_fecha_str(row['fechaRegistro'])} &nbsp;|&nbsp; <b>Modificación:</b> {formatear_fecha_str(row['fechaModificacion'])}<br>
+                            <b>Geometría (geom):</b> {geom_str}<br>
+                            <b>Observaciones:</b> {row['observaciones']}
                         </span>
                     """
           st.markdown(detalle_html, unsafe_allow_html=True)
-
-          col_img1, col_img2 = st.columns(2)
-          with col_img1:
-            img_bytes = procesar_bytes_foto(row["fotos"])
-            if img_bytes is not None and len(img_bytes) > 0:
-              st.markdown(
-                  "<p style='color: #00E5FF; font-size: 0.85rem; margin-top:"
-                  " 10px; margin-bottom: 5px;'>📸 Fotografía 1:</p>",
-                  unsafe_allow_html=True,
-              )
-              st.image(
-                  img_bytes,
-                  caption=f"ID: {row['id']} (Foto 1)",
-                  use_container_width=True,
-              )
-
-          with col_img2:
-            img_bytes_2 = procesar_bytes_foto(row["fotos_2"])
-            if img_bytes_2 is not None and len(img_bytes_2) > 0:
-              st.markdown(
-                  "<p style='color: #00E5FF; font-size: 0.85rem; margin-top:"
-                  " 10px; margin-bottom: 5px;'>📸 Fotografía 2:</p>",
-                  unsafe_allow_html=True,
-              )
-              st.image(
-                  img_bytes_2,
-                  caption=f"ID: {row['id']} (Foto 2)",
-                  use_container_width=True,
-              )
     else:
-      st.info("No se encontraron registros.")
+      st.info("No se encontraron registros de levantamientos.")
 
   with tab_bd_completa:
-    st.markdown("### Tabla Completa de VRP_Oficial (Base de Datos)")
+    st.markdown("### Tabla Completa de Levantamientos (Base de Datos)")
 
     query_completa = (
-        f'SELECT {COLUMNAS_VPRS} FROM "Agua_potable"."VRP_Oficial" ORDER BY id_0 ASC;'
+        f'SELECT {COLUMNAS_LEV} FROM "Usuarios"."levantamientos" ORDER BY fid ASC;'
     )
     df_completo, err_bd_comp = obtener_datos(query_completa)
 
@@ -870,285 +779,6 @@ if st.session_state.active_tab == "📍 Registros":
       st.caption(f"Total de registros en base de datos: {len(df_completo)}")
     else:
       st.warning("⚠️ No se encontraron registros en la base de datos.")
-
-  with tab_sheets:
-    st.markdown("### Hoja de Cálculo: 2.Informe visitas a VRP´s")
-
-    sheet_url_editable = "https://docs.google.com/spreadsheets/d/1am_DvVrUYPYqXnH8Pt3xoeMuG6BFr4z2x8PBRNskB-M/edit?rm=embedded&gid=769091515#gid=769091515"
-
-    st.markdown(
-        f"""
-        <iframe 
-            src="{sheet_url_editable}" 
-            style="width: 100%; height: 80vh; border: 1px solid #334155; border-radius: 0px 0px 8px 8px;" 
-            allowfullscreen>
-        </iframe>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.link_button(
-        "🔗 Abrir hoja directamente en pestaña de Google Sheets",
-        "https://docs.google.com/spreadsheets/d/1am_DvVrUYPYqXnH8Pt3xoeMuG6BFr4z2x8PBRNskB-M/edit#gid=769091515",
-    )
-
-  with tab_comparativa:
-    st.markdown(
-        "### 🔍 Auditoría y Comparativa: BD vs Hoja '2.Informe visitas a VRP´s'"
-    )
-    st.info(
-        "📌 **Prioridad:** Base de Datos. Esta herramienta evalúa la pestaña"
-        " específica de Sheets frente a PostgreSQL independientemente de"
-        " mayúsculas o minúsculas en 'ID'."
-    )
-
-    if st.button("🔄 Ejecutar Comparación de Datos"):
-      with st.spinner("Procesando datos de la pestaña especificada..."):
-        query_audit = f'SELECT {COLUMNAS_VPRS} FROM "Agua_potable"."VRP_Oficial";'
-        df_bd, err_audit_bd = obtener_datos(query_audit)
-
-        csv_sheets_url = "https://docs.google.com/spreadsheets/d/1am_DvVrUYPYqXnH8Pt3xoeMuG6BFr4z2x8PBRNskB-M/gviz/tq?tqx=out:csv&gid=769091515"
-
-        try:
-          df_sheets = pd.read_csv(csv_sheets_url)
-          err_sheets = None
-        except Exception as e:
-          err_sheets = str(e)
-          df_sheets = pd.DataFrame()
-
-        if err_audit_bd:
-          st.error(f"❌ Error al consultar la Base de Datos: {err_audit_bd}")
-        elif err_sheets:
-          st.error(
-              f"❌ Error al descargar datos de la pestaña de Sheets:"
-              f" {err_sheets}."
-          )
-        else:
-          col_id_sheets = [
-              c for c in df_sheets.columns if str(c).strip().lower() == "id"
-          ]
-          col_id_bd = [
-              c for c in df_bd.columns if str(c).strip().lower() == "id"
-          ]
-
-          if not col_id_sheets:
-            st.error(
-                "❌ No se encontró la columna 'ID' o 'id' en la pestaña de"
-                " Sheets."
-                f" Columnas detectadas: {list(df_sheets.columns)}"
-            )
-          elif not col_id_bd:
-            st.error(
-                "❌ No se encontró la columna 'id' en la consulta de la Base de"
-                " Datos."
-            )
-          else:
-            name_id_sheets = col_id_sheets[0]
-            name_id_bd = col_id_bd[0]
-
-            df_bd["id_clean"] = (
-                df_bd[name_id_bd].astype(str).str.strip().str.upper()
-            )
-            df_sheets["id_clean"] = (
-                df_sheets[name_id_sheets].astype(str).str.strip().str.upper()
-            )
-
-            df_bd = df_bd[~df_bd["id_clean"].isin(["NAN", "NONE", ""])]
-            df_sheets = df_sheets[~df_sheets["id_clean"].isin(["NAN", "NONE", ""])]
-
-            ids_bd = set(df_bd["id_clean"].unique())
-            ids_sheets = set(df_sheets["id_clean"].unique())
-
-            ids_solo_sheets = ids_sheets - ids_bd
-            df_solo_sheets = df_sheets[
-                df_sheets["id_clean"].isin(ids_solo_sheets)
-            ]
-
-            ids_solo_bd = ids_bd - ids_sheets
-            df_solo_bd = df_bd[df_bd["id_clean"].isin(ids_solo_bd)]
-
-            ids_comunes = ids_bd.intersection(ids_sheets)
-
-            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-            col_m1.metric("Registros BD", len(ids_bd))
-            col_m2.metric("Registros en Pestaña Sheets", len(ids_sheets))
-            col_m3.metric(
-                "⚠️ En Sheets y NO en BD",
-                len(ids_solo_sheets),
-                delta_color="inverse",
-            )
-            col_m4.metric("Coinciden en ID", len(ids_comunes))
-
-            st.markdown("---")
-
-            st.markdown(
-                "#### 🚨 1. Registros presentes en '2.Informe visitas a VRP´s'"
-                " que NO existen en la Base de Datos"
-            )
-            if not df_solo_sheets.empty:
-              st.warning(
-                  f"Se encontraron **{len(df_solo_sheets)}** registros en la"
-                  " pestaña de Sheets que no están registrados en PostgreSQL:"
-              )
-              cols_mostrar_sheets = [
-                  c for c in df_solo_sheets.columns if c != "id_clean"
-              ]
-              st.dataframe(
-                  df_solo_sheets[cols_mostrar_sheets],
-                  use_container_width=True,
-                  hide_index=True,
-              )
-            else:
-              st.success(
-                  "✅ Todos los registros de la pestaña de Sheets existen en la"
-                  " Base de Datos."
-              )
-
-            with st.expander("ℹ️ 2. Registros en Base de Datos que FALTAN en Sheets"):
-              if not df_solo_bd.empty:
-                st.info(
-                    f"Hay **{len(df_solo_bd)}** registros de PostgreSQL que no"
-                    " se encuentran en la pestaña de Sheets:"
-                )
-                cols_mostrar_bd = [
-                    c for c in df_bd.columns if c != "id_clean"
-                ]
-                st.dataframe(
-                    df_solo_bd[cols_mostrar_bd],
-                    use_container_width=True,
-                    hide_index=True,
-                )
-              else:
-                st.success(
-                    "✅ Todos los registros de la Base de Datos están"
-                    " presentes en la pestaña de Sheets."
-                )
-
-            with st.expander("🔍 3. Diferencias de atributos en IDs comunes"):
-              cols_map_bd = {
-                  str(c).strip().lower(): c
-                  for c in df_bd.columns
-                  if c not in ["id_clean", name_id_bd]
-              }
-              cols_map_sh = {
-                  str(c).strip().lower(): c
-                  for c in df_sheets.columns
-                  if c not in ["id_clean", name_id_sheets]
-              }
-
-              columnas_comunes_keys = list(
-                  set(cols_map_bd.keys()).intersection(set(cols_map_sh.keys()))
-              )
-
-              if not columnas_comunes_keys:
-                st.caption(
-                    "No se detectaron nombres de columnas adicionales coincidentes"
-                    " entre ambas fuentes para comparar contenido campo a"
-                    " campo."
-                )
-              else:
-                df_merged = pd.merge(
-                    df_bd,
-                    df_sheets,
-                    on="id_clean",
-                    suffixes=("_BD", "_Sheets"),
-                )
-                diferencias_list = []
-
-                def son_valores_equivalentes(val1, val2, es_fecha=False):
-                  s1 = (
-                      str(val1).strip().lower()
-                      if pd.notna(val1)
-                      else ""
-                  )
-                  s2 = (
-                      str(val2).strip().lower()
-                      if pd.notna(val2)
-                      else ""
-                  )
-
-                  s1 = "" if s1 in ["nan", "none", "nat", ""] else s1
-                  s2 = "" if s2 in ["nan", "none", "nat", ""] else s2
-
-                  if s1 == s2:
-                    return True
-
-                  if es_fecha:
-                    try:
-                      dt1 = pd.to_datetime(val1, dayfirst=True, errors="coerce")
-                      if pd.isna(dt1):
-                        dt1 = pd.to_datetime(val1, errors="coerce")
-                      dt2 = pd.to_datetime(val2, dayfirst=True, errors="coerce")
-                      if pd.isna(dt2):
-                        dt2 = pd.to_datetime(val2, errors="coerce")
-                      if pd.notna(dt1) and pd.notna(dt2):
-                        return dt1.date() == dt2.date()
-                    except Exception:
-                      pass
-
-                  try:
-                    f1 = float(s1)
-                    f2 = float(s2)
-                    return f1 == f2
-                  except ValueError:
-                    pass
-
-                  return False
-
-                for key_col in columnas_comunes_keys:
-                  col_bd_real = cols_map_bd[key_col]
-                  col_sh_real = cols_map_sh[key_col]
-
-                  col_bd_name = (
-                      f"{col_bd_real}_BD"
-                      if col_bd_real in df_sheets.columns
-                      else col_bd_real
-                  )
-                  col_sh_name = (
-                      f"{col_sh_real}_Sheets"
-                      if col_sh_real in df_bd.columns
-                      else col_sh_real
-                  )
-
-                  if (
-                      col_bd_name in df_merged.columns
-                      and col_sh_name in df_merged.columns
-                  ):
-                    es_col_fecha = col_bd_real in COLUMNAS_FECHA
-
-                    for _, row_d in df_merged.iterrows():
-                      v_bd = row_d[col_bd_name]
-                      v_sh = row_d[col_sh_name]
-
-                      if not son_valores_equivalentes(v_bd, v_sh, es_fecha=es_col_fecha):
-                        v_bd_mostrar = (
-                            formatear_fecha_str(v_bd)
-                            if es_col_fecha
-                            else v_bd
-                        )
-                        diferencias_list.append({
-                            "ID Válvula": row_d["id_clean"],
-                            "Campo": col_bd_real,
-                            "Valor en BD (Prioritario)": v_bd_mostrar,
-                            "Valor en Sheets": v_sh,
-                        })
-
-                if diferencias_list:
-                  df_diff_final = pd.DataFrame(diferencias_list)
-                  st.warning(
-                      f"Se detectaron **{len(df_diff_final)}** diferencias en"
-                      " campos para registros con el mismo ID:"
-                  )
-                  st.dataframe(
-                      df_diff_final,
-                      use_container_width=True,
-                      hide_index=True,
-                  )
-                else:
-                  st.success(
-                      "✅ Los valores en las columnas coincidentes son"
-                      " idénticos para todos los IDs en común."
-                  )
 
   with tab_gestor_bd:
     usuario_actual_sesion = str(st.session_state.get("usuario_actual", "")).strip().lower()
@@ -1177,14 +807,14 @@ if st.session_state.active_tab == "📍 Registros":
             st.rerun()
 
         st.info(
-            "📌 Administra el vaciado masivo, actualizaciones e inserciones masivas por CSV usando `id_0` como identificador, y traspasos de información."
+            "📌 Administra el vaciado masivo, actualizaciones e inserciones masivas por CSV usando `fid` como identificador principal."
         )
 
         st.markdown("---")
         st.markdown("#### 1️⃣ Zona de Peligro: Vaciar Tabla de Base de Datos")
         st.warning(
             "⚠️ Esta acción eliminará **todos** los registros de la tabla"
-            ' `"Agua_potable"."VRP_Oficial"`. Utilízala con extrema precaución.'
+            ' `"Usuarios"."levantamientos"`. Utilízala con extrema precaución.'
         )
 
         if "confirmar_borrado_total" not in st.session_state:
@@ -1202,7 +832,7 @@ if st.session_state.active_tab == "📍 Registros":
           with col_bt_del1:
             if st.button("⚠️ Sí, borrar absolutamente todo"):
               try:
-                ejecutar_sql('DELETE FROM "Agua_potable"."VRP_Oficial";')
+                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos";')
                 st.session_state.confirmar_borrado_total = False
                 st.success("¡Todos los registros han sido eliminados de la BD!")
                 t.sleep(1)
@@ -1217,7 +847,7 @@ if st.session_state.active_tab == "📍 Registros":
         st.markdown("---")
         st.markdown("#### 2️⃣ Actualización e Inserción Masiva (CSV)")
         st.write(
-            "Sube un archivo CSV que contenga obligatoriamente la columna identificadora `id_0` para actualizar registros existentes o insertar nuevos automáticamente."
+            "Sube un archivo CSV que contenga obligatoriamente la columna identificadora `fid` para actualizar registros existentes o insertar nuevos automáticamente."
         )
 
         archivo_csv_subido = st.file_uploader(
@@ -1231,25 +861,25 @@ if st.session_state.active_tab == "📍 Registros":
             df_csv_input = pd.read_csv(archivo_csv_subido)
             df_csv_input.columns = [str(c).strip() for c in df_csv_input.columns]
 
-            if "id_0" not in df_csv_input.columns and "ID_0" not in df_csv_input.columns:
-              st.error("❌ El archivo CSV debe contener obligatoriamente una columna llamada `id_0` como identificador.")
+            if "fid" not in df_csv_input.columns and "FID" not in df_csv_input.columns:
+              st.error("❌ El archivo CSV debe contener obligatoriamente una columna llamada `fid` como identificador.")
             else:
-              col_id_csv = "id_0" if "id_0" in df_csv_input.columns else "ID_0"
+              col_id_csv = "fid" if "fid" in df_csv_input.columns else "FID"
               st.success(
-                  f"CSV cargado correctamente ({len(df_csv_input)} filas detectadas). Identificador principal: `id_0`."
+                  f"CSV cargado correctamente ({len(df_csv_input)} filas detectadas). Identificador principal: `fid`."
               )
               st.dataframe(df_csv_input.head(5), use_container_width=True)
 
               cols_csv = list(df_csv_input.columns)
               columnas_a_procesar = st.multiselect(
                   "Selecciona qué columnas deseas actualizar/insertar en la BD:",
-                  options=[c for c in cols_csv if c.lower() != "id_0"],
+                  options=[c for c in cols_csv if c.lower() != "fid"],
                   default=[
                       c for c in cols_csv 
-                      if c.lower() != "id_0" and c.lower() in [
-                          "id", "estatus", "domicilio", "colonia", "obs", "observaciones", 
-                          "diametro", "marca", "modelo", "trim", "sect_hidr", "cota_terr",
-                          "cal_antd", "cal_antn", "cal_postd", "cal_postn", "prog_hor", "tipo_valv", "num_serie"
+                      if c.lower() != "fid" and c.lower() in [
+                          "medidorid", "serie", "toma", "domicilio", "colonia", "latitud", 
+                          "longitud", "precisiongps", "ajustemanual", "observaciones", 
+                          "usuarionombre", "activo", "predio_viv"
                       ]
                   ],
               )
@@ -1276,21 +906,21 @@ if st.session_state.active_tab == "📍 Registros":
                       with st.session_state.db_engine.connect() as conn:
                         with conn.begin():
                           for _, row_c in lote_df.iterrows():
-                            val_id_0 = row_c[col_id_csv]
-                            if pd.isna(val_id_0):
+                            val_fid = row_c[col_id_csv]
+                            if pd.isna(val_fid):
                               continue
                             try:
-                              val_id_0_int = int(val_id_0)
+                              val_fid_int = int(val_fid)
                             except:
                               continue
 
-                            check_query = text('SELECT id_0 FROM "Agua_potable"."VRP_Oficial" WHERE id_0 = :id0')
-                            res_chk = conn.execute(check_query, {"id0": val_id_0_int}).fetchone()
+                            check_query = text('SELECT fid FROM "Usuarios"."levantamientos" WHERE fid = :f')
+                            res_chk = conn.execute(check_query, {"f": val_fid_int}).fetchone()
 
-                            params_dict = {"id_0": val_id_0_int}
+                            params_dict = {"fid": val_fid_int}
                             set_clauses = []
-                            insert_cols = ["id_0"]
-                            insert_vals = [":id_0"]
+                            insert_cols = ["fid"]
+                            insert_vals = [":fid"]
 
                             for col_p in columnas_a_procesar:
                               val_val = row_c[col_p]
@@ -1306,15 +936,15 @@ if st.session_state.active_tab == "📍 Registros":
                                 if res_chk:
                                   if set_clauses:
                                     sql_update_csv = text(f"""
-                                        UPDATE "Agua_potable"."VRP_Oficial" 
+                                        UPDATE "Usuarios"."levantamientos" 
                                         SET {", ".join(set_clauses)}
-                                        WHERE id_0 = :id_0;
+                                        WHERE fid = :fid;
                                     """)
                                     conn.execute(sql_update_csv, params_dict)
                                     actualizados_count += 1
                                 else:
                                   sql_insert_csv = text(f"""
-                                        INSERT INTO "Agua_potable"."VRP_Oficial" ({", ".join(insert_cols)})
+                                        INSERT INTO "Usuarios"."levantamientos" ({", ".join(insert_cols)})
                                         VALUES ({", ".join(insert_vals)});
                                     """)
                                   conn.execute(sql_insert_csv, params_dict)
@@ -1322,7 +952,7 @@ if st.session_state.active_tab == "📍 Registros":
                             except Exception as ex_fila:
                               errores_count += 1
                               if len(lista_errores_detalle) < 5:
-                                lista_errores_detalle.append(f"ID_0 {val_id_0_int}: {str(ex_fila)}")
+                                lista_errores_detalle.append(f"FID {val_fid_int}: {str(ex_fila)}")
                               continue
 
                     except Exception as e_lote:
@@ -1346,136 +976,28 @@ if st.session_state.active_tab == "📍 Registros":
           except Exception as e_csv:
             st.error(f"Error al leer el archivo CSV: {e_csv}")
 
-        st.markdown("---")
-        st.markdown(
-            "#### 3️⃣ Traspaso Bidireccional Selectivo (Sheets ⇄ Base de Datos)"
-        )
-        traspaso_dir = st.radio(
-            "Dirección del Traspaso:",
-            [
-                "📤 De Google Sheets hacia Base de Datos",
-                "📥 De Base de Datos hacia Google Sheets (Exportación)",
-            ],
-            horizontal=True,
-        )
-
-        query_bd_traspaso = f'SELECT {COLUMNAS_VPRS} FROM "Agua_potable"."VRP_Oficial";'
-        df_bd_t, err_t_bd = obtener_datos(query_bd_traspaso)
-
-        csv_sheets_traspaso_url = "https://docs.google.com/spreadsheets/d/1am_DvVrUYPYqXnH8Pt3xoeMuG6BFr4z2x8PBRNskB-M/gviz/tq?tqx=out:csv&gid=769091515"
-        try:
-          df_sh_t = pd.read_csv(csv_sheets_traspaso_url)
-          err_t_sh = None
-        except Exception as e_sh_t:
-          df_sh_t = pd.DataFrame()
-          err_t_sh = str(e_sh_t)
-
-        if err_t_bd or err_t_sh:
-          st.error("❌ No se pudieron cargar los datos de ambas fuentes para realizar el traspaso.")
-        elif not df_bd_t.empty and not df_sh_t.empty:
-          if "De Google Sheets hacia Base de Datos" in traspaso_dir:
-            st.info("Se sincronizarán los campos seleccionados tomando como fuente Google Sheets y emparejándolos por el campo ID.")
-            cols_sh_disp = [c for c in df_sh_t.columns if str(c).strip().lower() not in ["id_clean"]]
-            campos_a_pasar_sh = st.multiselect(
-                "Selecciona los campos de Sheets que quieres pasar a la BD:",
-                options=cols_sh_disp,
-            )
-
-            if st.button("🔄 Importar Campos Seleccionados desde Sheets"):
-              if not campos_a_pasar_sh:
-                st.warning("Selecciona al menos un campo para traspasar.")
-              else:
-                actualizados_sh_db = 0
-                with st.spinner("Traspasando información..."):
-                  for _, row_sh in df_sh_t.iterrows():
-                    id_sh_val = str(row_sh.get("id", "")).strip()
-                    if not id_sh_val or id_sh_val.lower() in ["nan", "none", ""]:
-                      continue
-
-                    set_parts = []
-                    params_sh = {"id_val": id_sh_val}
-                    for c_sh in campos_a_pasar_sh:
-                      val_cell = row_sh[c_sh]
-                      if pd.isna(val_cell):
-                        val_cell = None
-                      if c_sh in df_bd_t.columns:
-                        set_parts.append(f'"{c_sh}" = :{c_sh}')
-                        params_sh[c_sh] = val_cell
-
-                    if set_parts:
-                      sql_trasp_sh = f"""
-                                        UPDATE "Agua_potable"."VRP_Oficial" 
-                                        SET {", ".join(set_parts)}
-                                        WHERE TRIM(id) ILIKE :id_val;
-                                    """
-                      try:
-                        ejecutar_sql(sql_trasp_sh, params_sh)
-                        actualizados_sh_db += 1
-                      except Exception:
-                        pass
-
-                st.success(f"¡Traspaso completado! Se actualizaron {actualizados_sh_db} registros en la BD desde Sheets.")
-                t.sleep(1)
-                st.rerun()
-          else:
-            cols_bd_disp = [c for c in df_bd_t.columns if c not in ["geom", "coord_x", "coord_y", "id_clean"]]
-            campos_a_pasar_bd = st.multiselect(
-                "Selecciona los campos de la BD que deseas exportar:",
-                options=cols_bd_disp,
-            )
-
-            if campos_a_pasar_bd:
-              df_exportable = df_bd_t[["id"] + campos_a_pasar_bd].copy()
-              csv_export = df_exportable.to_csv(index=False).encode("utf-8")
-              st.download_button(
-                  label="📥 Descargar CSV con Campos Seleccionados de la BD",
-                  data=csv_export,
-                  file_name="traspaso_bd_a_sheets.csv",
-                  mime="text/csv",
-              )
-
-# 09 SECCION ------------------------------------------------------------ MAPA DE VRPs Y SECTORES HIDRÁULICOS (POSTGIS) -----------------------------------------------------------------------------------------
+# 09 SECCION ------------------------------------------------------------ MAPA DE LEVANTAMIENTOS DE PREDIOS (POSTGIS) -----------------------------------------------------------------------------------------
 
 elif st.session_state.active_tab == "🗺️ Mapa":
   query_mapa = """
         SELECT 
-            id_0,
-            id,
-            estatus,
+            fid,
+            medidorId,
+            serie,
+            toma,
             domicilio,
             colonia,
+            activo,
             ST_X(geom) as x,
             ST_Y(geom) as y
-        FROM "Agua_potable"."VRP_Oficial"
+        FROM "Usuarios"."levantamientos"
         WHERE geom IS NOT NULL;
     """
   df_mapa, err_mapa = obtener_datos(query_mapa)
 
-  query_sectores = """
-        SELECT 
-            objectid as fid,
-            sector,
-            ST_AsGeoJSON(ST_MakeValid(ST_Force2D(ST_Transform(geom, 4326)))) as geojson
-        FROM "Sectorizacion"."Sectores_hidr"
-        WHERE geom IS NOT NULL;
-    """
-  df_sectores, err_sectores = obtener_datos(query_sectores)
-
   if err_mapa:
-    st.error(f"❌ Error al cargar datos espaciales de VPRs: {err_mapa}")
+    st.error(f"❌ Error al cargar datos espaciales de levantamientos: {err_mapa}")
   else:
-    CONFIG_ESTADOS = {
-        "calibrada": {"color": "#2ECC71", "emoji": "🟢", "forma": "circulo"},
-        "abierta": {"color": "#3498DB", "emoji": "🔵", "forma": "circulo"},
-        "cerrada": {"color": "#E74C3C", "emoji": "🔴", "forma": "circulo"},
-        "dañada": {"color": "#E84393", "emoji": "⛔", "forma": "circulo"},
-        "descalibrada": {"color": "#F1C40F", "emoji": "⚠️", "forma": "triangulo"},
-        "habilitada": {"color": "#38B6FF", "emoji": "🔷", "forma": "rombo"},
-        "no opera": {"color": "#A0A0A0", "emoji": "⚫", "forma": "circulo"},
-        "pendiente": {"color": "#F1C40F", "emoji": "⚠️", "forma": "triangulo"},
-        "amarillo": {"color": "#F1C40F", "emoji": "🟡", "forma": "circulo"},
-    }
-
     m = folium.Map(
         location=[21.8853, -102.2916], zoom_start=13, control_scale=True
     )
@@ -1483,152 +1005,39 @@ elif st.session_state.active_tab == "🗺️ Mapa":
     agregar_capas_base_mapa(m)
     Fullscreen().add_to(m)
 
-    fg_sectores = folium.FeatureGroup(
-        name="📐 Sectores Hidráulicos", show=True
-    )
+    fg_activos = folium.FeatureGroup(name="🟢 Predios Activos", show=True)
+    fg_inactivos = folium.FeatureGroup(name="🔴 Predios Inactivos", show=True)
+    fg_activos.add_to(m)
+    fg_inactivos.add_to(m)
 
-    if not err_sectores and not df_sectores.empty:
-      import json
-
-      def estilo_final_sector(feature):
-        props = feature.get("properties", {})
-        nombre_actual = props.get("sector")
-        sec_sel = st.session_state.get("sector_resaltado")
-
-        es_match = (
-            sec_sel is not None and nombre_actual == sec_sel.get("sector")
-        )
-        afectacion_val = props.get("afectacion", 0)
-        color_dinamico = props.get("color_dinamico", "#2980B9")
-
-        fill_color_final = "#F1C40F" if es_match else color_dinamico
-
-        if es_match:
-          border_color_final = "#F39C12"
-          weight_final = 3
-          opacity_final = 0.5
-        elif afectacion_val > 0:
-          border_color_final = color_dinamico
-          weight_final = 2.5
-          opacity_final = 0.25
-        else:
-          border_color_final = "#2980B9"
-          weight_final = 1
-          opacity_final = 0.08
-
-        return {
-            "fillColor": fill_color_final,
-            "color": border_color_final,
-            "weight": weight_final,
-            "fillOpacity": opacity_final,
-        }
-
-      def estilo_hover_sector(feature):
-        return {"fillOpacity": 0.12, "weight": 2, "color": "#FFFFFF"}
-
-      for _, sec_row in df_sectores.iterrows():
-        try:
-          raw_json = sec_row["geojson"]
-          if pd.isna(raw_json) or not raw_json:
-            continue
-          
-          geom_json = json.loads(raw_json)
-
-          feature_estructurado = {
-              "type": "Feature",
-              "geometry": geom_json,
-              "properties": {
-                  "sector": str(sec_row.get("sector", "Sin Nombre")),
-                  "fid": sec_row.get("fid"),
-                  "afectacion": 0,
-                  "color_dinamico": "#2980B9",
-              },
-          }
-
-          folium.GeoJson(
-              feature_estructurado,
-              style_function=estilo_final_sector,
-              highlight_function=estilo_hover_sector,
-              tooltip=folium.GeoJsonTooltip(
-                  fields=["sector"],
-                  aliases=["Sector:"],
-                  localize=True,
-                  sticky=True,
-              ),
-          ).add_to(fg_sectores)
-        except Exception as e:
-          continue
-
-    fg_sectores.add_to(m)
-
-    grupos_capas = {}
     success_count = 0
 
     if not df_mapa.empty:
-      for estado_opc in OPCIONES_ESTADO_VALVULA:
-        count_est = len(
-            df_mapa[
-                df_mapa["estatus"].str.strip().str.lower()
-                == estado_opc.lower()
-            ]
-        )
-        conf = CONFIG_ESTADOS.get(
-            estado_opc.lower(),
-            {"color": "#95A5A6", "emoji": "⚪", "forma": "circulo"},
-        )
-
-        fg = folium.FeatureGroup(
-            name=f"{conf['emoji']} {estado_opc} ({count_est})", show=True
-        )
-        fg.add_to(m)
-        grupos_capas[estado_opc.lower()] = fg
-
-      fg_otros = folium.FeatureGroup(name="⚪ Otros / Sin Estado", show=True)
-      fg_otros.add_to(m)
-
       for _, row in df_mapa.iterrows():
         try:
           lon, lat = transformer_to_latlon.transform(row["x"], row["y"])
-          estado_raw = str(row["estatus"] or "Desconocido").strip()
-          estado_key = estado_raw.lower()
-          id_vrp = str(row["id"] or row["id_0"])
+          is_activo = bool(row["activo"]) if pd.notna(row["activo"]) else True
+          color_hex = "#2ECC71" if is_activo else "#E74C3C"
+          grupo_destino = fg_activos if is_activo else fg_inactivos
 
-          conf_punto = CONFIG_ESTADOS.get(
-              estado_key, {"color": "#95A5A6", "emoji": "⚪", "forma": "circulo"}
-          )
-          color_hex = conf_punto["color"]
-          emoji_punto = conf_punto["emoji"]
-          tipo_forma = conf_punto["forma"]
+          id_predio = str(row["medidorId"] or row["serie"] or row["fid"])
 
-          grupo_destino = grupos_capas.get(estado_key, fg_otros)
-
-          if tipo_forma == "triangulo":
-            simbolo_html = f'<span style="font-size: 13px; line-height: 1; filter: drop-shadow(0 0 3px {color_hex});">⚠️</span>'
-          elif tipo_forma == "rombo":
-            simbolo_html = f"""
-                        <span style="
-                            height: 10px; 
-                            width: 10px; 
-                            background-color: {color_hex}; 
-                            transform: rotate(45deg); 
-                            display: inline-block;
-                            box-shadow: 0 0 5px {color_hex};
-                        "></span>"""
-          else:
-            simbolo_html = f"""
-                        <span style="
-                            height: 10px; 
-                            width: 10px; 
-                            background-color: {color_hex}; 
-                            border-radius: 50%; 
-                            display: inline-block;
-                            box-shadow: 0 0 5px {color_hex};
-                        "></span>"""
+          simbolo_html = f"""
+                    <span style="
+                        height: 10px; 
+                        width: 10px; 
+                        background-color: {color_hex}; 
+                        border-radius: 50%; 
+                        display: inline-block;
+                        box-shadow: 0 0 5px {color_hex};
+                    "></span>"""
 
           popup_html = f"""
                     <div style="font-size: 0.85rem; color: #000; font-family: sans-serif;">
-                        <b>ID:</b> {id_vrp}<br>
-                        <b>Estado:</b> {emoji_punto} {estado_raw}<br>
+                        <b>Medidor ID:</b> {row['medidorId']}<br>
+                        <b>Serie:</b> {row['serie']}<br>
+                        <b>Toma:</b> {row['toma']}<br>
+                        <b>Activo:</b> {'Sí' if is_activo else 'No'}<br>
                         <b>Ubicación:</b> {row['domicilio'] or 'Sin domicilio'}, Col. {row['colonia'] or 'Sin colonia'}
                     </div>
                     """
@@ -1643,7 +1052,7 @@ elif st.session_state.active_tab == "🗺️ Mapa":
                             font-family: monospace, sans-serif;
                             margin-left: 6px; 
                             text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
-                        ">{id_vrp}</span>
+                        ">{id_predio}</span>
                     </div>
                     """
 
@@ -1674,37 +1083,19 @@ elif st.session_state.active_tab == "🗺️ Mapa":
 
     st_folium(m, width="100%", height=800, returned_objects=[])
 
-    total_sectores = len(df_sectores) if not df_sectores.empty else 0
     st.markdown(
-        f"<p style='color: #94A3B8; font-size: 0.85rem; margin-top: 10px;'>Se"
-        f" renderizaron {total_sectores} sectores hidráulicos y"
-        f" {success_count} VRPs georreferenciadas.</p>",
+        f"<p style='color: #94A3B8; font-size: 0.85rem; margin-top: 10px;'>Se renderizaron {success_count} predios georreferenciados en el mapa.</p>",
         unsafe_allow_html=True,
     )
 
-# 10 SECCION --------------------------------------------------------------------- AÑADIR NUEVA VÁLVULA ---------------------------------------------------------------------------------------------
+# 10 SECCION --------------------------------------------------------------------- AÑADIR NUEVO LEVANTAMIENTO DE PREDIO ---------------------------------------------------------------------------------------------
 
 elif st.session_state.active_tab == "➕ Añadir":
   if es_operador:
     st.error(
-        "⛔ El perfil de operador no tiene permisos para dar de alta nueva"
-        " infraestructura."
+        "⛔ El perfil de operador no tiene permisos para dar de alta nuevos levantamientos."
     )
     st.stop()
-
-  df_max_id0, err_max = obtener_datos(
-      'SELECT MAX(id_0) as max_id FROM "Agua_potable"."VRP_Oficial"'
-  )
-  siguiente_id_0 = 1
-  if (
-      not err_max
-      and not df_max_id0.empty
-      and df_max_id0["max_id"].iloc[0] is not None
-  ):
-    try:
-      siguiente_id_0 = int(df_max_id0["max_id"].iloc[0]) + 1
-    except Exception:
-      siguiente_id_0 = 1
 
   if "add_coord_x_input" not in st.session_state:
     st.session_state["add_coord_x_input"] = 0.0
@@ -1713,46 +1104,33 @@ elif st.session_state.active_tab == "➕ Añadir":
 
   a_c1, a_c2, a_c3, a_c4 = st.columns(4)
   with a_c1:
-    st.text_input(
-        "ID_0 (Registro)",
-        value=str(siguiente_id_0),
-        disabled=True,
-        key="add_id_0_bloq",
-    )
-    val_id_0 = siguiente_id_0
+    val_medidor_id = st.text_input("Medidor ID *Obligatorio", key="add_medidorId")
   with a_c2:
-    val_id = st.text_input("ID *Obligatorio", key="add_id")
+    val_serie = st.text_input("Serie", key="add_serie")
   with a_c3:
-    val_cota = st.number_input("Cota Terreno", value=0.0, key="add_cota")
+    val_toma = st.number_input("Toma", min_value=0, value=0, key="add_toma")
   with a_c4:
-    val_marca = st.text_input("Marca", key="add_marca")
+    val_predio_viv = st.text_input("Predio_Viv", key="add_predio_viv")
 
   a_c5, a_c6, a_c7, a_c8 = st.columns(4)
   with a_c5:
-    val_num_serie = st.text_input("Num. Serie", key="add_num_serie")
+    val_domicilio = st.text_input("Domicilio", key="add_domicilio")
   with a_c6:
-    val_diametro = st.number_input(
-        "Diámetro", min_value=0, value=0, key="add_diam"
-    )
+    val_colonia = st.text_input("Colonia", key="add_colonia")
   with a_c7:
-    val_modelo = st.text_input("Modelo", key="add_modelo")
+    val_latitud = st.number_input("Latitud", format="%.6f", value=21.8853, key="add_latitud")
   with a_c8:
-    val_trim = st.text_input("Trim", key="add_trim")
+    val_longitud = st.number_input("Longitud", format="%.6f", value=-102.2916, key="add_longitud")
 
   a_c9, a_c10, a_c11, a_c12 = st.columns(4)
   with a_c9:
-    val_domicilio = st.text_input("Domicilio", key="add_dom")
+    val_precision_gps = st.number_input("Precisión GPS (m)", value=0.0, key="add_precisionGps")
   with a_c10:
-    val_colonia = st.text_input("Colonia", key="add_col")
+    val_ajuste_manual = st.checkbox("Ajuste Manual", key="add_ajusteManual")
   with a_c11:
-    val_estat = st.selectbox(
-        "Estatus",
-        options=OPCIONES_ESTADO_VALVULA,
-        index=0,
-        key="add_estat",
-    )
+    val_activo = st.checkbox("Activo", value=True, key="add_activo")
   with a_c12:
-    val_sect_hidr = st.text_input("Sector Hidráulico (sect_hidr)", key="add_sect_hidr")
+    val_usuario_nombre = st.text_input("Usuario Nombre", value=st.session_state.get("usuario_actual", ""), key="add_usuarioNombre")
 
   col_coord_left, col_map_right = st.columns([1, 1])
 
@@ -1789,7 +1167,7 @@ elif st.session_state.active_tab == "➕ Añadir":
       ):
         folium.Marker(
             location=[lat_add, lon_add],
-            popup="Nueva VRP",
+            popup="Nuevo Predio",
             icon=folium.Icon(color="cyan", icon="info-sign"),
         ).add_to(m_add)
 
@@ -1826,175 +1204,72 @@ elif st.session_state.active_tab == "➕ Añadir":
     cx1, cx2 = st.columns(2)
     with cx1:
       val_coord_x = st.number_input(
-          "Coordenada X",
+          "Coordenada X (UTM)",
           format="%.2f",
           key="add_coord_x_input",
       )
     with cx2:
       val_coord_y = st.number_input(
-          "Coordenada Y",
+          "Coordenada Y (UTM)",
           format="%.3f",
           key="add_coord_y_input",
       )
 
-    cc1, cc2 = st.columns(2)
-    with cc1:
-      val_cal_antd = st.text_input("Calibración Ant. Día (cal_antd)", value="0.0", key="add_cand")
-    with cc2:
-      val_cal_antn = st.text_input("Calibración Ant. Noche (cal_antn)", value="0.0", key="add_cann")
-
-    cc3, cc4 = st.columns(2)
-    with cc3:
-      val_cal_postd = st.text_input("Calibración Post. Día (cal_postd)", value="0.0", key="add_cpostd")
-    with cc4:
-      val_cal_postn = st.text_input("Calibración Post. Noche (cal_postn)", value="0.0", key="add_cpostn")
-
-    cc5, cc6 = st.columns(2)
-    with cc5:
-      val_prog_hor = st.text_input("Programación Horaria (prog_hor)", key="add_prog_hor")
-    with cc6:
-      val_tipo_valv = st.text_input("Tipo Válvula (tipo_valv)", key="add_tipovalv")
-
-    val_fecha_obj = st.date_input(
-        "Fecha Visita (fecha_vis)",
-        value=datetime.date.today(),
-        format="DD/MM/YYYY",
-        key="add_fecha",
-    )
-    val_fecha_vis = val_fecha_obj.strftime("%d/%m/%Y")
-
-  val_obs = st.text_area("Observaciones (obs)", key="add_obs")
-
-  st.markdown(
-      "<hr style='border: 0.3px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-      unsafe_allow_html=True,
-  )
-  st.markdown(
-      '<h4 style="color: #00E5FF; font-size: 1rem; font-weight: 700;">📸'
-      " Registro de Fotografías</h4>",
-      unsafe_allow_html=True,
-  )
-
-  col_foto1, col_foto2 = st.columns(2)
-
-  with col_foto1:
-    st.markdown(
-        "<p style='font-weight: 600; font-size: 0.85rem;'>Fotografía 1</p>",
-        unsafe_allow_html=True,
-    )
-    origen_foto_1 = st.radio(
-        "Origen Foto 1",
-        ["📁 Seleccionar Archivo", "📷 Usar Cámara"],
-        key="origen_foto_1",
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    foto_input_1 = None
-    if origen_foto_1 == "📁 Seleccionar Archivo":
-      foto_input_1 = st.file_uploader(
-          "Subir Fotografía 1",
-          type=["png", "jpg", "jpeg"],
-          key="file_uploader_1",
-      )
-    else:
-      foto_input_1 = st.camera_input(
-          "Capturar Fotografía 1",
-          key="camara_nuevo_1",
-          label_visibility="collapsed",
-      )
-
-  with col_foto2:
-    st.markdown(
-        "<p style='font-weight: 600; font-size: 0.85rem;'>Fotografía 2</p>",
-        unsafe_allow_html=True,
-    )
-    origen_foto_2 = st.radio(
-        "Origen Foto 2",
-        ["📁 Seleccionar Archivo", "📷 Usar Cámara"],
-        key="origen_foto_2",
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    foto_input_2 = None
-    if origen_foto_2 == "📁 Seleccionar Archivo":
-      foto_input_2 = st.file_uploader(
-          "Subir Fotografía 2",
-          type=["png", "jpg", "jpeg"],
-          key="file_uploader_2",
-      )
-    else:
-      foto_input_2 = st.camera_input(
-          "Capturar Fotografía 2",
-          key="camara_nuevo_2",
-          label_visibility="collapsed",
-      )
+  val_observaciones = st.text_area("Observaciones", key="add_observaciones")
 
   st.markdown("<br>", unsafe_allow_html=True)
   if st.button(
-      "💾 Guardar Nuevo Registro VRP",
+      "💾 Guardar Nuevo Levantamiento",
       key="btn_guardar_nuevo",
       use_container_width=True,
   ):
-    if val_id:
+    if val_medidor_id:
       try:
-        foto_bytes = (
-            foto_input_1.getvalue() if foto_input_1 is not None else None
-        )
-        foto_bytes_2 = (
-            foto_input_2.getvalue() if foto_input_2 is not None else None
-        )
+        fecha_actual_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
 
         sql_insert = """
-                    INSERT INTO "Agua_potable"."VRP_Oficial" (
-                        id_0, id, num_serie, fecha_inst, tipo_valv, diametro, marca, modelo, trim, 
-                        control_au, domicilio, colonia, sect_hidr, distrito, cota_terr, estatus, 
-                        condicion, cal_antd, cal_antn, fecha_vis, p_ab, p_arr, cal_postd, cal_postn, 
-                        prog_hor, fecha_mtto, tim_cambio, fecha_tim, obs, _ult_visita, _p_ab, _p_arr, 
-                        fotos, fotos_2, geom
+                    INSERT INTO "Usuarios"."levantamientos" (
+                        medidorId, serie, toma, domicilio, colonia, latitud, longitud, 
+                        precisionGps, ajusteManual, observaciones, usuarioNombre, 
+                        fechaRegistro, fechaModificacion, activo, "Predio_Viv", "Latitud", "Longitud", geom
                     ) VALUES (
-                        :id_0, :id, :num_serie, NULL, :tipo_valv, :diametro, :marca, :modelo, :trim, 
-                        NULL, :domicilio, :colonia, :sect_hidr, NULL, :cota_terr, :estatus, 
-                        NULL, :cal_antd, :cal_antn, :fecha_vis, NULL, NULL, :cal_postd, :cal_postn, 
-                        :prog_hor, NULL, NULL, NULL, :obs, NULL, NULL, NULL, 
-                        :fotos, :fotos_2, ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
+                        :medidorId, :serie, :toma, :domicilio, :colonia, :latitud, :longitud, 
+                        :precisionGps, :ajusteManual, :observaciones, :usuarioNombre, 
+                        :fechaRegistro, :fechaModificacion, :activo, :Predio_Viv, :Latitud, :Longitud, 
+                        ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
                     )
                 """
         ejecutar_sql(
             sql_insert,
             {
-                "id_0": val_id_0,
-                "id": val_id,
-                "num_serie": val_num_serie if val_num_serie.strip() != "" else None,
-                "tipo_valv": val_tipo_valv if val_tipo_valv.strip() != "" else None,
-                "diametro": val_diametro,
-                "marca": val_marca,
-                "modelo": val_modelo,
-                "trim": val_trim,
-                "domicilio": val_domicilio,
-                "colonia": val_colonia,
-                "sect_hidr": val_sect_hidr,
-                "cota_terr": val_cota,
-                "estatus": val_estat,
-                "cal_antd": val_cal_antd if val_cal_antd.strip() != "" else None,
-                "cal_antn": val_cal_antn if val_cal_antn.strip() != "" else None,
-                "cal_postd": val_cal_postd if val_cal_postd.strip() != "" else None,
-                "cal_postn": val_cal_postn if val_cal_postn.strip() != "" else None,
-                "prog_hor": val_prog_hor if val_prog_hor.strip() != "" else None,
-                "fecha_vis": val_fecha_vis,
-                "obs": val_obs,
-                "fotos": foto_bytes,
-                "fotos_2": foto_bytes_2,
+                "medidorId": val_medidor_id.strip(),
+                "serie": val_serie if val_serie.strip() != "" else None,
+                "toma": val_toma,
+                "domicilio": val_domicilio if val_domicilio.strip() != "" else None,
+                "colonia": val_colonia if val_colonia.strip() != "" else None,
+                "latitud": val_latitud,
+                "longitud": val_longitud,
+                "precisionGps": val_precision_gps,
+                "ajusteManual": val_ajuste_manual,
+                "observaciones": val_observaciones if val_observaciones.strip() != "" else None,
+                "usuarioNombre": val_usuario_nombre if val_usuario_nombre.strip() != "" else None,
+                "fechaRegistro": fecha_actual_str,
+                "fechaModificacion": fecha_actual_str,
+                "activo": val_activo,
+                "Predio_Viv": val_predio_viv if val_predio_viv.strip() != "" else None,
+                "Latitud": val_latitud,
+                "Longitud": val_longitud,
                 "coord_x": val_coord_x,
                 "coord_y": val_coord_y,
             },
         )
-        st.success("¡Válvula registrada con éxito!")
+        st.success("¡Predio registrado con éxito!")
         t.sleep(1)
         st.rerun()
       except Exception as ex:
         st.error(f"Error al insertar: {ex}")
     else:
-      st.warning("El campo ID es obligatorio.")
+      st.warning("El campo Medidor ID es obligatorio.")
 
 # 11 ----------------------------------------------------------------- EDITAR Y ELIMINAR ----------------------------------------------------------------------------------------------
 
@@ -2004,40 +1279,41 @@ elif st.session_state.active_tab == "⚙️ Editar":
   if busqueda_edit and busqueda_edit.strip() != "":
     filtro_ed = f"%{busqueda_edit.strip()}%"
     query_edit = f"""
-            SELECT {COLUMNAS_VPRS} 
-            FROM "Agua_potable"."VRP_Oficial" 
-            WHERE id ILIKE :filtro 
-               OR num_serie ILIKE :filtro 
+            SELECT {COLUMNAS_LEV} 
+            FROM "Usuarios"."levantamientos" 
+            WHERE medidorId ILIKE :filtro 
+               OR serie ILIKE :filtro 
+               OR CAST(toma AS TEXT) ILIKE :filtro
                OR domicilio ILIKE :filtro 
                OR colonia ILIKE :filtro 
-            ORDER BY id_0
+            ORDER BY fid
             LIMIT 1
         """
-    df_vprs, error_db = obtener_datos(query_edit, {"filtro": filtro_ed})
+    df_lev, error_db = obtener_datos(query_edit, {"filtro": filtro_ed})
   else:
     query = (
-        f'SELECT {COLUMNAS_VPRS} FROM "Agua_potable"."VRP_Oficial" ORDER BY id_0 LIMIT 1'
+        f'SELECT {COLUMNAS_LEV} FROM "Usuarios"."levantamientos" ORDER BY fid LIMIT 1'
     )
-    df_vprs, error_db = obtener_datos(query)
+    df_lev, error_db = obtener_datos(query)
 
   col_search, col_info, col_msg = st.columns([2.5, 1.5, 2], vertical_alignment="center")
 
   with col_search:
     st.text_input(
-        "🔍 Buscar válvula a editar (ID, Num. Serie, Domicilio, Colonia):",
-        placeholder="Ej. VRP-01, Centro...",
+        "🔍 Buscar predio a editar (Medidor ID, Serie, Toma, Domicilio, Colonia):",
+        placeholder="Ej. MED-001, Centro...",
         key="busqueda_edit_val",
     )
 
   if error_db:
     st.error(f"Error: {error_db}")
-  elif not df_vprs.empty:
-    row_first = df_vprs.iloc[0]
+  elif not df_lev.empty:
+    row_first = df_lev.iloc[0]
 
     with col_info:
       st.markdown(
-          f"<div style='margin-top: 15px;'><span style='color: #00E5FF; font-weight: bold;'>ID_0: {row_first['id_0']}</span> | "
-          f"<span style='color: #F8FAFC; font-weight: bold;'>ID: {row_first['id']}</span></div>",
+          f"<div style='margin-top: 15px;'><span style='color: #00E5FF; font-weight: bold;'>FID: {row_first['fid']}</span> | "
+          f"<span style='color: #F8FAFC; font-weight: bold;'>Medidor ID: {row_first['medidorId']}</span></div>",
           unsafe_allow_html=True,
       )
 
@@ -2052,106 +1328,93 @@ elif st.session_state.active_tab == "⚙️ Editar":
           unsafe_allow_html=True,
       )
 
-    for idx, row in df_vprs.iterrows():
-      e_id_0 = row["id_0"]
+    for idx, row in df_lev.iterrows():
+      e_fid = row["fid"]
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
-      x_key = f"coord_x_input_{row['id_0']}"
-      y_key = f"coord_y_input_{row['id_0']}"
+      x_key = f"coord_x_input_{row['fid']}"
+      y_key = f"coord_y_input_{row['fid']}"
       if x_key not in st.session_state:
         st.session_state[x_key] = default_x
       if y_key not in st.session_state:
         st.session_state[y_key] = default_y
 
-      estado_actual = str(row["estatus"] or "").strip()
-      idx_estado = 0
-      if estado_actual in OPCIONES_ESTADO_VALVULA:
-        idx_estado = OPCIONES_ESTADO_VALVULA.index(estado_actual)
-
-      e_num_serie_val = (
-          ""
-          if (
-              pd.isna(row["num_serie"])
-              or str(row["num_serie"]).strip().lower() in ["nan", "none"]
-          )
-          else str(row["num_serie"])
-      )
-
       e_c1, e_c2, e_c3, e_c4 = st.columns(4)
       with e_c1:
         st.text_input(
-            "ID_0",
-            value=str(row["id_0"] or 0),
+            "FID",
+            value=str(row["fid"] or 0),
             disabled=True,
-            key=f"id0_bloq_{row['id_0']}",
+            key=f"fid_bloq_{row['fid']}",
         )
       with e_c2:
-        e_id = st.text_input(
-            "ID", value=str(row["id"] or ""), key=f"id_{row['id_0']}"
+        e_medidor_id = st.text_input(
+            "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
         )
       with e_c3:
-        e_cota = st.number_input(
-            "Cota Terreno",
-            value=float(row["cota_terr"] or 0.0),
-            key=f"cota_{row['id_0']}",
+        e_serie = st.text_input(
+            "Serie",
+            value=str(row["serie"] or ""),
+            key=f"ser_{row['fid']}",
         )
       with e_c4:
-        e_marca = st.text_input(
-            "Marca",
-            value=str(row["marca"] or ""),
-            key=f"mar_{row['id_0']}",
+        e_toma = st.number_input(
+            "Toma",
+            value=int(row["toma"] or 0),
+            key=f"tom_{row['fid']}",
         )
 
       e_c5, e_c6, e_c7, e_c8 = st.columns(4)
       with e_c5:
-        e_num_serie = st.text_input(
-            "Num. Serie", value=e_num_serie_val, key=f"num_serie_{row['id_0']}"
+        e_domicilio = st.text_input(
+            "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
         )
       with e_c6:
-        e_diametro = st.number_input(
-            "Diámetro",
-            value=int(row["diametro"] or 0),
-            key=f"diam_{row['id_0']}",
+        e_colonia = st.text_input(
+            "Colonia",
+            value=str(row["colonia"] or ""),
+            key=f"col_{row['fid']}",
         )
       with e_c7:
-        e_modelo = st.text_input(
-            "Modelo",
-            value=str(row["modelo"] or ""),
-            key=f"mod_{row['id_0']}",
+        e_latitud = st.number_input(
+            "Latitud",
+            format="%.6f",
+            value=float(row["latitud"] or 21.8853),
+            key=f"lat_{row['fid']}",
         )
       with e_c8:
-        e_trim = st.text_input(
-            "Trim",
-            value=str(row["trim"] or ""),
-            key=f"trim_{row['id_0']}",
+        e_longitud = st.number_input(
+            "Longitud",
+            format="%.6f",
+            value=float(row["longitud"] or -102.2916),
+            key=f"lon_{row['fid']}",
         )
 
       e_c9, e_c10, e_c11, e_c12 = st.columns(4)
       with e_c9:
-        e_domicilio = st.text_input(
-            "Domicilio",
-            value=str(row["domicilio"] or ""),
-            key=f"dom_{row['id_0']}",
+        e_precision = st.number_input(
+            "Precisión GPS",
+            value=float(row["precisionGps"] or 0.0),
+            key=f"prec_{row['fid']}",
         )
       with e_c10:
-        e_colonia = st.text_input(
-            "Colonia",
-            value=str(row["colonia"] or ""),
-            key=f"col_{row['id_0']}",
+        e_ajuste = st.checkbox(
+            "Ajuste Manual",
+            value=bool(row["ajusteManual"]),
+            key=f"ajust_{row['fid']}",
         )
       with e_c11:
-        e_estat = st.selectbox(
-            "Estatus",
-            options=OPCIONES_ESTADO_VALVULA,
-            index=idx_estado,
-            key=f"est_{row['id_0']}",
+        e_activo = st.checkbox(
+            "Activo",
+            value=bool(row["activo"]),
+            key=f"act_{row['fid']}",
         )
       with e_c12:
-        e_sect_hidr = st.text_input(
-            "Sector Hidráulico (sect_hidr)",
-            value=str(row["sect_hidr"] or ""),
-            key=f"sec_{row['id_0']}",
+        e_predio_viv = st.text_input(
+            "Predio_Viv",
+            value=str(row["Predio_Viv"] or ""),
+            key=f"pviv_{row['fid']}",
         )
 
       col_coord_left, col_map_right = st.columns([1, 1])
@@ -2188,7 +1451,7 @@ elif st.session_state.active_tab == "⚙️ Editar":
           ):
             folium.Marker(
                 location=[lat_ed, lon_ed],
-                popup=f"VRP: {row['id']}",
+                popup=f"Predio: {row['medidorId']}",
                 icon=folium.Icon(color="cyan", icon="info-sign"),
             ).add_to(m_ed)
 
@@ -2197,7 +1460,7 @@ elif st.session_state.active_tab == "⚙️ Editar":
               m_ed,
               width="100%",
               height=325,
-              key=f"map_edit_preview_{row['id_0']}",
+              key=f"map_edit_preview_{row['fid']}",
               returned_objects=["last_clicked"],
           )
 
@@ -2236,196 +1499,60 @@ elif st.session_state.active_tab == "⚙️ Editar":
               key=y_key,
           )
 
-        cc1, cc2 = st.columns(2)
-        with cc1:
-          val_cantd_str = str(row["cal_antd"]) if pd.notna(row["cal_antd"]) and str(row["cal_antd"]).strip().lower() not in ["nan", "none"] else "0.0"
-          e_cal_antd = st.text_input(
-              "Calibración Ant. Día (cal_antd)",
-              value=val_cantd_str,
-              key=f"cand_{row['id_0']}",
-          )
-        with cc2:
-          val_cantn_str = str(row["cal_antn"]) if pd.notna(row["cal_antn"]) and str(row["cal_antn"]).strip().lower() not in ["nan", "none"] else "0.0"
-          e_cal_antn = st.text_input(
-              "Calibración Ant. Noche (cal_antn)",
-              value=val_cantn_str,
-              key=f"cann_{row['id_0']}",
-          )
-
-        cc3, cc4 = st.columns(2)
-        with cc3:
-          val_cpostd_str = str(row["cal_postd"]) if pd.notna(row["cal_postd"]) and str(row["cal_postd"]).strip().lower() not in ["nan", "none"] else "0.0"
-          e_cal_postd = st.text_input(
-              "Calibración Post. Día (cal_postd)",
-              value=val_cpostd_str,
-              key=f"cpostd_{row['id_0']}",
-          )
-        with cc4:
-          val_cpostn_str = str(row["cal_postn"]) if pd.notna(row["cal_postn"]) and str(row["cal_postn"]).strip().lower() not in ["nan", "none"] else "0.0"
-          e_cal_postn = st.text_input(
-              "Calibración Post. Noche (cal_postn)",
-              value=val_cpostn_str,
-              key=f"cpostn_{row['id_0']}",
-          )
-
-        cc5, cc6 = st.columns(2)
-        with cc5:
-          val_prog_hor_str = str(row["prog_hor"]) if pd.notna(row["prog_hor"]) and str(row["prog_hor"]).strip().lower() not in ["nan", "none"] else ""
-          e_prog_hor = st.text_input(
-              "Programación Horaria (prog_hor)",
-              value=val_prog_hor_str,
-              key=f"prog_hor_{row['id_0']}",
-          )
-        with cc6:
-          e_tipo_valv = st.text_input(
-              "Tipo Válvula (tipo_valv)",
-              value=str(row["tipo_valv"] or ""),
-              key=f"tipval_{row['id_0']}",
-          )
-
-        fecha_def = parsear_fecha_segura(row["fecha_vis"])
-        e_fecha_obj = st.date_input(
-            "Fecha Visita (fecha_vis)",
-            value=fecha_def,
-            format="DD/MM/YYYY",
-            key=f"fec_{row['id_0']}",
-        )
-        e_fecha_vis = e_fecha_obj.strftime("%d/%m/%Y")
-
-      e_obs = st.text_area(
-          "Observaciones (obs)",
-          value=str(row["obs"] or ""),
-          key=f"obs_{row['id_0']}",
+      e_observaciones = st.text_area(
+          "Observaciones",
+          value=str(row["observaciones"] or ""),
+          key=f"obs_{row['fid']}",
       )
-
-      st.markdown(
-          "<hr style='border: 0.3px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-          unsafe_allow_html=True,
-      )
-      st.markdown(
-          '<h4 style="color: #00E5FF; font-size: 1rem; font-weight: 700;">📸'
-          " Gestión de Fotografías</h4>",
-          unsafe_allow_html=True,
-      )
-
-      key_ver_1 = f"uploader_ver_1_{row['id_0']}"
-      key_ver_2 = f"uploader_ver_2_{row['id_0']}"
-
-      if key_ver_1 not in st.session_state:
-        st.session_state[key_ver_1] = 0
-      if key_ver_2 not in st.session_state:
-        st.session_state[key_ver_2] = 0
-
-      col_edit_f1, col_edit_f2 = st.columns(2)
-
-      with col_edit_f1:
-        foto_actual_bytes = procesar_bytes_foto(row["fotos"])
-        eliminar_foto = False
-
-        if foto_actual_bytes is not None and len(foto_actual_bytes) > 0:
-          st.image(
-              foto_actual_bytes,
-              caption=f"ID: {row['id']} (Foto 1 Actual)",
-              use_container_width=True,
-          )
-          eliminar_foto = st.checkbox(
-              "🗑️ Eliminar fotografía 1", key=f"del_foto_{row['id_0']}"
-          )
-
-        nueva_foto_archivo = st.file_uploader(
-            "📁 Cargar/Reemplazar Foto 1 desde PC",
-            type=["png", "jpg", "jpeg", "webp"],
-            key=f"file_edit_1_{row['id_0']}_{st.session_state[key_ver_1]}",
-        )
-
-      with col_edit_f2:
-        foto_actual_bytes_2 = procesar_bytes_foto(row["fotos_2"])
-        eliminar_foto_2 = False
-
-        if foto_actual_bytes_2 is not None and len(foto_actual_bytes_2) > 0:
-          st.image(
-              foto_actual_bytes_2,
-              caption=f"ID: {row['id']} (Foto 2 Actual)",
-              use_container_width=True,
-          )
-          eliminar_foto_2 = st.checkbox(
-              "🗑️ Eliminar fotografía 2", key=f"del_foto_2_{row['id_0']}"
-          )
-
-        nueva_foto_archivo_2 = st.file_uploader(
-            "📁 Cargar/Reemplazar Foto 2 desde PC",
-            type=["png", "jpg", "jpeg", "webp"],
-            key=f"file_edit_2_{row['id_0']}_{st.session_state[key_ver_2]}",
-        )
 
       st.markdown("<br>", unsafe_allow_html=True)
       actualizar_click = st.button(
           "💾 Actualizar Registro en Base de Datos",
-          key=f"btn_act_{row['id_0']}",
+          key=f"btn_act_{row['fid']}",
           use_container_width=True,
       )
 
       if actualizar_click:
         try:
-          if eliminar_foto:
-            foto_bytes_final = None
-          else:
-            foto_bytes_final = foto_actual_bytes
-            if nueva_foto_archivo is not None:
-              foto_bytes_final = nueva_foto_archivo.getvalue()
-
-          if eliminar_foto_2:
-            foto_bytes_final_2 = None
-          else:
-            foto_bytes_final_2 = foto_actual_bytes_2
-            if nueva_foto_archivo_2 is not None:
-              foto_bytes_final_2 = nueva_foto_archivo_2.getvalue()
+          fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
 
           sql_update = """
-                        UPDATE "Agua_potable"."VRP_Oficial" 
-                        SET id = :id, num_serie = :num_serie, tipo_valv = :tipo_valv, 
-                            diametro = :diametro, marca = :marca, modelo = :modelo, trim = :trim, 
-                            domicilio = :domicilio, colonia = :colonia, sect_hidr = :sect_hidr, 
-                            cota_terr = :cota_terr, estatus = :estatus, cal_antd = :cal_antd, 
-                            cal_antn = :cal_antn, fecha_vis = :fecha_vis, cal_postd = :cal_postd, 
-                            cal_postn = :cal_postn, prog_hor = :prog_hor, obs = :obs, fotos = :fotos, fotos_2 = :fotos_2,
+                        UPDATE "Usuarios"."levantamientos" 
+                        SET medidorId = :medidorId, serie = :serie, toma = :toma, 
+                            domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
+                            longitud = :longitud, precisionGps = :precisionGps, 
+                            ajusteManual = :ajusteManual, observaciones = :observaciones, 
+                            activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                            "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                            fechaModificacion = :fechaModificacion, 
                             geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
-                        WHERE id_0 = :id_0
+                        WHERE fid = :fid
                     """
           ejecutar_sql(
               sql_update,
               {
-                  "id_0": e_id_0,
-                  "id": e_id,
-                  "num_serie": e_num_serie if e_num_serie.strip() != "" else None,
-                  "tipo_valv": e_tipo_valv if e_tipo_valv.strip() != "" else None,
-                  "diametro": e_diametro,
-                  "marca": e_marca,
-                  "modelo": e_modelo,
-                  "trim": e_trim,
-                  "domicilio": e_domicilio,
-                  "colonia": e_colonia,
-                  "sect_hidr": e_sect_hidr,
-                  "cota_terr": e_cota,
-                  "estatus": e_estat,
-                  "cal_antd": e_cal_antd if e_cal_antd.strip() != "" else None,
-                  "cal_antn": e_cal_antn if e_cal_antn.strip() != "" else None,
-                  "cal_postd": e_cal_postd if e_cal_postd.strip() != "" else None,
-                  "cal_postn": e_cal_postn if e_cal_postn.strip() != "" else None,
-                  "prog_hor": e_prog_hor if e_prog_hor.strip() != "" else None,
-                  "fecha_vis": e_fecha_vis,
-                  "obs": e_obs,
-                  "fotos": foto_bytes_final,
-                  "fotos_2": foto_bytes_final_2,
+                  "fid": e_fid,
+                  "medidorId": e_medidor_id.strip(),
+                  "serie": e_serie if e_serie.strip() != "" else None,
+                  "toma": e_toma,
+                  "domicilio": e_domicilio if e_domicilio.strip() != "" else None,
+                  "colonia": e_colonia if e_colonia.strip() != "" else None,
+                  "latitud": e_latitud,
+                  "longitud": e_longitud,
+                  "precisionGps": e_precision,
+                  "ajusteManual": e_ajuste,
+                  "observaciones": e_observaciones if e_observaciones.strip() != "" else None,
+                  "activo": e_activo,
+                  "Predio_Viv": e_predio_viv if e_predio_viv.strip() != "" else None,
+                  "Latitud": e_latitud,
+                  "Longitud": e_longitud,
+                  "fechaModificacion": fecha_mod_str,
                   "coord_x": st.session_state[x_key],
                   "coord_y": st.session_state[y_key],
               },
           )
 
-          st.session_state[key_ver_1] += 1
-          st.session_state[key_ver_2] += 1
-
-          st.success(f"¡Registro ID_0 {row['id_0']} actualizado con éxito!")
+          st.success(f"¡Predio FID {row['fid']} actualizado con éxito!")
           t.sleep(1)
           st.rerun()
         except Exception as ex:
@@ -2437,29 +1564,29 @@ elif st.session_state.active_tab == "⚙️ Editar":
             unsafe_allow_html=True,
         )
 
-        if st.session_state.registro_to_delete == row["id_0"]:
+        if st.session_state.registro_to_delete == row["fid"]:
           st.markdown(
               f"<p style='color: #ff4d4d; font-size: 0.9rem; font-weight:"
-              f" bold;'>Para eliminar el registro ID_0 {row['id_0']} (ID:"
-              f" {row['id']}), escribe la palabra 'delete':</p>",
+              f" bold;'>Para eliminar el registro FID {row['fid']} (Medidor ID:"
+              f" {row['medidorId']}), escribe la palabra 'delete':</p>",
               unsafe_allow_html=True,
           )
           confirm_text = st.text_input(
-              "Confirmación de eliminación", key=f"input_del_text_{row['id_0']}"
+              "Confirmación de eliminación", key=f"input_del_text_{row['fid']}"
           )
 
           col_y, col_n = st.columns(2)
           with col_y:
             if st.button(
                 "Sí, eliminar definitivamente",
-                key=f"confirm_del_{row['id_0']}",
+                key=f"confirm_del_{row['fid']}",
                 use_container_width=True,
             ):
               if confirm_text.strip() == "delete":
                 try:
                   ejecutar_sql(
-                      'DELETE FROM "Agua_potable"."VRP_Oficial" WHERE id_0 = :id_0',
-                      {"id_0": row["id_0"]},
+                      'DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid',
+                      {"fid": row["fid"]},
                   )
                   st.session_state.registro_to_delete = None
                   st.success("Registro eliminado correctamente.")
@@ -2475,7 +1602,7 @@ elif st.session_state.active_tab == "⚙️ Editar":
           with col_n:
             if st.button(
                 "Cancelar",
-                key=f"cancel_del_{row['id_0']}",
+                key=f"cancel_del_{row['fid']}",
                 use_container_width=True,
             ):
               st.session_state.registro_to_delete = None
@@ -2483,10 +1610,10 @@ elif st.session_state.active_tab == "⚙️ Editar":
         else:
           if st.button(
               "🗑️ Eliminar este registro",
-              key=f"btn_del_{row['id_0']}",
+              key=f"btn_del_{row['fid']}",
               use_container_width=True,
           ):
-            st.session_state.registro_to_delete = row["id_0"]
+            st.session_state.registro_to_delete = row["fid"]
             st.rerun()
   else:
     st.info("No se encontró ningún registro para editar.")
@@ -2495,7 +1622,7 @@ elif st.session_state.active_tab == "⚙️ Editar":
 st.markdown(
     """
     <div style="text-align: center; color: #94A3B8; font-size: 0.8rem; margin-top: 30px;">
-        MIAA - Sistema de Gestión de Válvulas Reductoras de Presión © 2026
+        MIAA - Sistema de Gestión de Levantamientos de Predios © 2026
     </div>
     """,
     unsafe_allow_html=True,
