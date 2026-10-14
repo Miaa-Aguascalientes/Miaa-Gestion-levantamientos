@@ -28,6 +28,8 @@ if "autenticado" not in st.session_state:
   st.session_state.autenticado = False
 if "gestor_bd_autenticado" not in st.session_state:
   st.session_state.gestor_bd_autenticado = False
+if "tipo_vista_grafico" not in st.session_state:
+  st.session_state.tipo_vista_grafico = "Diaria"
 
 zona_mx = ZoneInfo("America/Mexico_City")
 
@@ -841,9 +843,9 @@ if st.session_state.active_tab == "⚙️ Editar":
 if st.session_state.active_tab == "📊 Dashboard General":
   st.markdown(
       """
-      <div style="margin-bottom: 20px;">
-          <h2 style="color: #00E5FF; font-size: 1.5rem; font-weight: 800; margin-bottom: 5px;">📊 Dashboard General de Levantamentos</h2>
-          <p style="color: #94A3B8; font-size: 0.9rem;">Resumen estadístico, gráficos de instalaciones y mapa 3D de polígonos.</p>
+      <div style="margin-bottom: 12px;">
+          <h2 style="color: #00E5FF; font-size: 1.3rem; font-weight: 800; margin-bottom: 2px;">📊 Dashboard General de Levantamientos</h2>
+          <p style="color: #94A3B8; font-size: 0.85rem;">Resumen estadístico, gráficos de instalaciones y mapa 3D de ubicación.</p>
       </div>
       """,
       unsafe_allow_html=True,
@@ -860,15 +862,17 @@ if st.session_state.active_tab == "📊 Dashboard General":
       else 0
   )
 
-  # Tarjetas superiores de métricas estilo MIAA
+  # Tarjetas superiores compactas
   c_m1, c_m2 = st.columns(2)
   with c_m1:
     st.markdown(
         f"""
-        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #00E5FF; border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos</div>
-            <div style="color: #00E5FF; font-size: 2.2rem; font-weight: 800;">{total_reg:,}</div>
-            <div style="color: #94A3B8; font-size: 0.75rem; margin-top: 5px;">Total</div>
+        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #00E5FF; border-radius: 6px; padding: 12px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <div style="color: #94A3B8; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">Levantamientos</div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                <div style="color: #00E5FF; font-size: 1.6rem; font-weight: 800;">{total_reg:,}</div>
+                <div style="color: #94A3B8; font-size: 0.75rem;">Total</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -877,78 +881,84 @@ if st.session_state.active_tab == "📊 Dashboard General":
   with c_m2:
     st.markdown(
         f"""
-        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #3B82F6; border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos con Ajuste Manual</div>
-            <div style="color: #F8FAFC; font-size: 0.8rem; margin-bottom: 10px;">Registros ajustados manualmente</div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 800;">{ajuste_manual_count:,} con ajuste</div>
-                <div style="color: #94A3B8; font-size: 0.9rem;">Ajuste manual: <b>{ajuste_manual_count:,}</b></div>
+        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #3B82F6; border-radius: 6px; padding: 12px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <div style="color: #94A3B8; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">Levantamientos con Ajuste Manual</div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                <div style="color: #00E5FF; font-size: 1.6rem; font-weight: 800;">{ajuste_manual_count:,} con ajuste</div>
+                <div style="color: #94A3B8; font-size: 0.75rem;">Ajuste manual: <b>{ajuste_manual_count:,}</b></div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-  st.markdown("<br>", unsafe_allow_html=True)
+  st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
-  # Gráficas: Instalaciones por Día e Instalaciones por Mes
-  col_g1, col_g2 = st.columns([1.6, 1], gap="large")
-
-  with col_g1:
+  # Gráfica superior con selector de tipo de vista (Diaria / Mensual)
+  col_titulo_g, col_botones_g = st.columns([3, 1])
+  with col_titulo_g:
     st.markdown(
-        "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Instalaciones por Día</h4>",
+        "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 0px;'>Instalaciones de Medidores</h4>",
         unsafe_allow_html=True,
     )
-    if not err_dash and not df_dash.empty:
-      df_dash["fecha_dt"] = pd.to_datetime(
-          df_dash["fechaRegistro"], errors="coerce"
-      )
+    st.markdown(
+        "<p style='color: #94A3B8; font-size: 0.8rem; margin-top: 0px;'>Todos los registros</p>",
+        unsafe_allow_html=True,
+    )
+  with col_botones_g:
+    tipo_vista = st.radio(
+        "Vista Gráfico",
+        ["Mensual", "Diaria"],
+        index=1 if st.session_state.tipo_vista_grafico == "Diaria" else 0,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="selector_vista_grafico",
+    )
+    st.session_state.tipo_vista_grafico = tipo_vista
+
+  if not err_dash and not df_dash.empty:
+    df_dash["fecha_dt"] = pd.to_datetime(
+        df_dash["fechaRegistro"], errors="coerce"
+    )
+    
+    if st.session_state.tipo_vista_grafico == "Diaria":
       df_dias = (
           df_dash.groupby(df_dash["fecha_dt"].dt.date)
           .size()
           .reset_index(name="count")
       )
       df_dias = df_dias.dropna().sort_values("fecha_dt")
+      # Formato tipo mes abreviado estilo ej. "11-ago"
       df_dias["fecha_str"] = pd.to_datetime(df_dias["fecha_dt"]).dt.strftime(
-          "%d/%m/%Y"
-      )
+          "%d-%b"
+      ).str.lower()
 
-      chart_data_dias = pd.DataFrame(
+      chart_data = pd.DataFrame(
           {"Instalaciones": df_dias["count"].values},
           index=df_dias["fecha_str"].values,
       )
-      st.bar_chart(chart_data_dias, color="#00B4D8", height=320)
+      st.bar_chart(chart_data, color="#2B7DE9", height=280)
     else:
-      st.info("No hay datos suficientes para mostrar la gráfica por día.")
-
-  with col_g2:
-    st.markdown(
-        "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Instalaciones por Mes</h4>",
-        unsafe_allow_html=True,
-    )
-    if not err_dash and not df_dash.empty:
-      df_dash["mes_anio"] = pd.to_datetime(
-          df_dash["fechaRegistro"], errors="coerce"
-      ).dt.to_period("M")
+      df_dash["mes_anio"] = df_dash["fecha_dt"].dt.to_period("M")
       df_meses = (
           df_dash.groupby("mes_anio").size().reset_index(name="count")
       )
-      df_meses = df_meses.dropna().sort_values("mes_anio", ascending=False)
-      df_meses["mes_str"] = df_meses["mes_anio"].dt.strftime("%B %Y")
+      df_meses = df_meses.dropna().sort_values("mes_anio")
+      df_meses["mes_str"] = df_meses["mes_anio"].dt.strftime("%b %Y")
 
-      chart_data_meses = pd.DataFrame(
+      chart_data = pd.DataFrame(
           {"Instalaciones": df_meses["count"].values},
           index=df_meses["mes_str"].values,
       )
-      st.bar_chart(chart_data_meses, color="#0284C7", height=320, horizontal=True)
-    else:
-      st.info("No hay datos suficientes para mostrar la gráfica por mes.")
+      st.bar_chart(chart_data, color="#2B7DE9", height=280)
+  else:
+    st.info("No hay datos suficientes para mostrar la gráfica.")
 
-  st.markdown("<br>", unsafe_allow_html=True)
+  st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-  # Mapa 3D de Ubicación de Medidores (Barra delgadas estilo alfiler)
+  # Mapa 3D de Ubicación de Medidores
   st.markdown(
-      "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Mapa de Ubicación de Medidores</h4>",
+      "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
@@ -966,7 +976,7 @@ if st.session_state.active_tab == "📊 Dashboard General":
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
-            "elevation": 30,  # Altura corta
+            "elevation": 30,
             "color": [0, 229, 255, 200],
         })
 
@@ -979,8 +989,8 @@ if st.session_state.active_tab == "📊 Dashboard General":
         data=puntos_3d,
         get_position="position",
         get_elevation="elevation",
-        elevation_scale=1,  # Escala de elevación baja
-        radius=3,           # Radio de 3 metros para columnas muy delgadas
+        elevation_scale=1,
+        radius=3,
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
