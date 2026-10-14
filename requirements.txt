@@ -9,3 +9,5 @@ plotly
 streamlit-autorefresh
 bcrypt
 shapely
+pymysql
+pyproj
