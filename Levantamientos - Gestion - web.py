@@ -698,8 +698,13 @@ if st.session_state.active_tab == "⚙️ Editar":
       default_ant_x = float(row["coord_ant_x"]) if pd.notna(row["coord_ant_x"]) else 0.0
       default_ant_y = float(row["coord_ant_y"]) if pd.notna(row["coord_ant_y"]) else 0.0
 
-      db_original_x = default_x
-      db_original_y = default_y
+      # Almacenar la posición original de BD en session state antes de cualquier interacción
+      orig_x_key = f"orig_x_val_{row['fid']}"
+      orig_y_key = f"orig_y_val_{row['fid']}"
+      if orig_x_key not in st.session_state:
+        st.session_state[orig_x_key] = default_x
+      if orig_y_key not in st.session_state:
+        st.session_state[orig_y_key] = default_y
 
       x_key = f"coord_x_input_{row['fid']}"
       y_key = f"coord_y_input_{row['fid']}"
@@ -867,7 +872,7 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=y_key,
           )
 
-        # Campos para mostrar las coordenadas anteriores (geom_ant) debajo de X y Y
+        # Muestra la coordenada anterior registrada en la BD o respalda la posición previa
         c_ant1, c_ant2 = st.columns(2)
         with c_ant1:
           st.number_input(
@@ -906,6 +911,9 @@ if st.session_state.active_tab == "⚙️ Editar":
           nuevo_x = st.session_state[x_key]
           nuevo_y = st.session_state[y_key]
           
+          db_original_x = st.session_state[orig_x_key]
+          db_original_y = st.session_state[orig_y_key]
+          
           hubo_cambio_coord = (nuevo_x != db_original_x) or (nuevo_y != db_original_y)
           
           if hubo_cambio_coord:
@@ -918,7 +926,7 @@ if st.session_state.active_tab == "⚙️ Editar":
                               activo = :activo, "Predio_Viv" = :Predio_Viv, 
                               "Latitud" = :Latitud, "Longitud" = :Longitud, 
                               "fechaModificacion" = :fechaModificacion, 
-                              geom_ant = COALESCE(geom_ant, ST_SetSRID(ST_MakePoint(:orig_x, :orig_y), 32613)),
+                              geom_ant = ST_SetSRID(ST_MakePoint(:orig_x, :orig_y), 32613),
                               geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
                           WHERE fid = :fid
                       """
@@ -961,6 +969,11 @@ if st.session_state.active_tab == "⚙️ Editar":
                   "orig_y": db_original_y,
               },
           )
+
+          # Limpiamos las llaves guardadas en session state para forzar la recarga con los nuevos datos
+          for k in [x_key, y_key, orig_x_key, orig_y_key]:
+            if k in st.session_state:
+              del st.session_state[k]
 
           st.success(f"¡Predio FID {row['fid']} actualizado con éxito!")
           t.sleep(1)
