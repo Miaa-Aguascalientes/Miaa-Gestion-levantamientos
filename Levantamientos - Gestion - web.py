@@ -703,6 +703,7 @@ if st.session_state.active_tab == "⚙️ Editar":
       ant_x_key = f"coord_ant_x_input_{row['fid']}"
       ant_y_key = f"coord_ant_y_input_{row['fid']}"
 
+      # Inicializar valores en session state si no existen
       if x_key not in st.session_state:
         st.session_state[x_key] = default_x
       if y_key not in st.session_state:
@@ -712,11 +713,25 @@ if st.session_state.active_tab == "⚙️ Editar":
       if ant_y_key not in st.session_state:
         st.session_state[ant_y_key] = default_ant_y
 
+      # Callback para actualizar coordenadas al hacer clic en el mapa (evita el error de Streamlit)
+      map_key = f"map_edit_preview_{row['fid']}"
+      if map_key in st.session_state and st.session_state[map_key] and st.session_state[map_key].get("last_clicked"):
+        clicked_data = st.session_state[map_key]["last_clicked"]
+        lat_c = clicked_data["lat"]
+        lon_c = clicked_data["lng"]
+        utm_x, utm_y = transformer_to_utm.transform(lon_c, lat_c)
+        new_x = round(utm_x, 2)
+        new_y = round(utm_y, 3)
+        if st.session_state[x_key] != new_x or st.session_state[y_key] != new_y:
+          st.session_state[ant_x_key] = st.session_state[x_key]
+          st.session_state[ant_y_key] = st.session_state[y_key]
+          st.session_state[x_key] = new_x
+          st.session_state[y_key] = new_y
+
       # Layout principal: Izquierda con todos los campos organizados en 2 columnas, Derecha con el mapa grande
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
-        # Sub-columnas internas para acomodar todos los inputs limpios en 2 columnas
         ic1, ic2 = st.columns(2)
         with ic1:
           st.text_input(
@@ -844,30 +859,15 @@ if st.session_state.active_tab == "⚙️ Editar":
             ).add_to(m_ed)
 
           folium.LayerControl(collapsed=False).add_to(m_ed)
-          # Mapa con mayor altura para aprovechar el espacio de la derecha
-          map_data_ed = st_folium(
+          
+          # Renderizado del mapa con soporte de clic interactivo
+          st_folium(
               m_ed,
               width="100%",
               height=540,
-              key=f"map_edit_preview_{row['fid']}",
+              key=map_key,
               returned_objects=["last_clicked"],
           )
-
-          if map_data_ed and map_data_ed.get("last_clicked"):
-            lat_c = map_data_ed["last_clicked"]["lat"]
-            lon_c = map_data_ed["last_clicked"]["lng"]
-            utm_x, utm_y = transformer_to_utm.transform(lon_c, lat_c)
-            new_x = round(utm_x, 2)
-            new_y = round(utm_y, 3)
-            if (
-                st.session_state[x_key] != new_x
-                or st.session_state[y_key] != new_y
-            ):
-              st.session_state[ant_x_key] = st.session_state[x_key]
-              st.session_state[ant_y_key] = st.session_state[y_key]
-              st.session_state[x_key] = new_x
-              st.session_state[y_key] = new_y
-              st.rerun()
 
         except Exception as e_map_ed:
           st.info(
@@ -947,7 +947,7 @@ if st.session_state.active_tab == "⚙️ Editar":
               },
           )
 
-          for k in [x_key, y_key, ant_x_key, ant_y_key]:
+          for k in [x_key, y_key, ant_x_key, ant_y_key, map_key]:
             if k in st.session_state:
               del st.session_state[k]
 
