@@ -854,8 +854,8 @@ if st.session_state.active_tab == "📊 Dashboard General":
   )
 
   total_reg = len(df_dash) if not err_dash and not df_dash.empty else 0
-  pendientes_ajuste = (
-      len(df_dash[df_dash["ajusteManual"] == False])
+  ajuste_manual_count = (
+      len(df_dash[df_dash["ajusteManual"] == True])
       if not err_dash and not df_dash.empty
       else 0
   )
@@ -878,11 +878,11 @@ if st.session_state.active_tab == "📊 Dashboard General":
     st.markdown(
         f"""
         <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #3B82F6; border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos Pendientes por Ajuste</div>
-            <div style="color: #F8FAFC; font-size: 0.8rem; margin-bottom: 10px;">Requieren ajuste manual de coordenadas</div>
+            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos con Ajuste Manual</div>
+            <div style="color: #F8FAFC; font-size: 0.8rem; margin-bottom: 10px;">Registros ajustados manualmente</div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 800;">{pendientes_ajuste:,} pendientes</div>
-                <div style="color: #94A3B8; font-size: 0.9rem;">Sin ajuste manual: <b>{pendientes_ajuste:,}</b></div>
+                <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 800;">{ajuste_manual_count:,} con ajuste</div>
+                <div style="color: #94A3B8; font-size: 0.9rem;">Ajuste manual: <b>{ajuste_manual_count:,}</b></div>
             </div>
         </div>
         """,
