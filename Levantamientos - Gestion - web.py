@@ -522,93 +522,10 @@ if not st.session_state.autenticado:
 # 05.1. SECCION ------------------------------------------------------------- DETERMINAR ROL DEL USUARIO -----------------------------------------------------------------------------------------------------------
 es_operador = st.session_state.get("tipo_usuario", "") == "operador"
 
-# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
-with st.sidebar:
-
-  st.markdown(
-      """
-        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
-            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
-        </div>
-    """,
-      unsafe_allow_html=True,
-  )
-
-  st.markdown(
-      f"""
-        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
-            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
-            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
-        </div>
-    """,
-      unsafe_allow_html=True,
-  )
-
-  opciones_menu = ["⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
-
-  if (
-      "active_tab" not in st.session_state
-      or st.session_state.active_tab not in opciones_menu
-  ):
-    st.session_state.active_tab = opciones_menu[0]
-
-  st.markdown(
-      "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
-      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
-      unsafe_allow_html=True,
-  )
-
-  for opcion in opciones_menu:
-    es_activa = st.session_state.active_tab == opcion
-    tipo_btn = "primary" if es_activa else "secondary"
-
-    if st.button(
-        opcion,
-        key=f"nav_{opcion}",
-        use_container_width=True,
-        type=tipo_btn,
-    ):
-      if st.session_state.active_tab != opcion:
-        st.session_state.active_tab = opcion
-        st.rerun()
-
-  st.markdown(
-      "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-      unsafe_allow_html=True,
-  )
-
-  df_sidebar_levantamientos, _ = obtener_datos(
-      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
-  )
-
-  if not df_sidebar_levantamientos.empty:
-    st.markdown(
-        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
-        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
-        unsafe_allow_html=True,
-    )
-
-    total_predios = len(df_sidebar_levantamientos)
-    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
-    inactivos_count = total_predios - activos_count
-
-    st.markdown(
-        f"""
-        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.6;">
-            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
-            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
-            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-  st.markdown("<br>", unsafe_allow_html=True)
-
-  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
-    st.session_state.autenticado = False
-    st.session_state.gestor_bd_autenticado = False
-    st.rerun()
+# Variables temporales para el guardado global desde el sidebar
+trigger_actualizar = False
+trigger_eliminar = False
+fid_a_actualizar = None
 
 # 07 SECCION ------------------------------------------------------------------------ CABECERA PRINCIPAL ---------------------------------------------------------------------------------------------------------
 st.markdown(
@@ -692,6 +609,7 @@ if st.session_state.active_tab == "⚙️ Editar":
 
     for idx, row in df_lev.iterrows():
       e_fid = row["fid"]
+      fid_a_actualizar = e_fid
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
@@ -703,7 +621,6 @@ if st.session_state.active_tab == "⚙️ Editar":
       ant_x_key = f"coord_ant_x_input_{row['fid']}"
       ant_y_key = f"coord_ant_y_input_{row['fid']}"
 
-      # Inicializar valores en session state si no existen
       if x_key not in st.session_state:
         st.session_state[x_key] = default_x
       if y_key not in st.session_state:
@@ -713,7 +630,6 @@ if st.session_state.active_tab == "⚙️ Editar":
       if ant_y_key not in st.session_state:
         st.session_state[ant_y_key] = default_ant_y
 
-      # Callback para actualizar coordenadas al hacer clic en el mapa (evita el error de Streamlit)
       map_key = f"map_edit_preview_{row['fid']}"
       if map_key in st.session_state and st.session_state[map_key] and st.session_state[map_key].get("last_clicked"):
         clicked_data = st.session_state[map_key]["last_clicked"]
@@ -860,7 +776,6 @@ if st.session_state.active_tab == "⚙️ Editar":
 
           folium.LayerControl(collapsed=False).add_to(m_ed)
           
-          # Renderizado del mapa con soporte de clic interactivo
           st_folium(
               m_ed,
               width="100%",
@@ -874,152 +789,216 @@ if st.session_state.active_tab == "⚙️ Editar":
               "Haga clic en el mapa para actualizar la posición geográfica."
               f" ({e_map_ed})"
           )
-
-      st.markdown("<br>", unsafe_allow_html=True)
-      actualizar_click = st.button(
-          "💾 Actualizar Registro en Base de Datos",
-          key=f"btn_act_{row['fid']}",
-          use_container_width=True,
-      )
-
-      if actualizar_click:
-        try:
-          fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
-          
-          nuevo_x = st.session_state[x_key]
-          nuevo_y = st.session_state[y_key]
-          nuevo_ant_x = st.session_state[ant_x_key]
-          nuevo_ant_y = st.session_state[ant_y_key]
-          
-          hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
-          
-          if hubo_cambio_coord:
-            sql_update = """
-                          UPDATE "Usuarios"."levantamientos" 
-                          SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
-                              domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
-                              longitud = :longitud, "precisionGps" = :precisionGps, 
-                              "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                              activo = :activo, "Predio_Viv" = :Predio_Viv, 
-                              "Latitud" = :Latitud, "Longitud" = :Longitud, 
-                              "fechaModificacion" = :fechaModificacion, 
-                              geom_ant = ST_SetSRID(ST_MakePoint(:coord_ant_x, :coord_ant_y), 32613),
-                              geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
-                          WHERE fid = :fid
-                      """
-          else:
-            sql_update = """
-                          UPDATE "Usuarios"."levantamientos" 
-                          SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
-                              domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
-                              longitud = :longitud, "precisionGps" = :precisionGps, 
-                              "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                              activo = :activo, "Predio_Viv" = :Predio_Viv, 
-                              "Latitud" = :Latitud, "Longitud" = :Longitud, 
-                              "fechaModificacion" = :fechaModificacion, 
-                              geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
-                          WHERE fid = :fid
-                      """
-
-          ejecutar_sql(
-              sql_update,
-              {
-                  "fid": e_fid,
-                  "medidorId": e_medidor_id.strip(),
-                  "serie": e_serie if e_serie.strip() != "" else None,
-                  "toma": e_toma,
-                  "domicilio": e_domicilio if e_domicilio.strip() != "" else None,
-                  "colonia": e_colonia if e_colonia.strip() != "" else None,
-                  "latitud": e_latitud,
-                  "longitud": e_longitud,
-                  "precisionGps": e_precision,
-                  "ajusteManual": e_ajuste,
-                  "observaciones": e_observaciones if e_observaciones.strip() != "" else None,
-                  "activo": e_activo,
-                  "Predio_Viv": e_predio_viv if e_predio_viv.strip() != "" else None,
-                  "Latitud": e_latitud,
-                  "Longitud": e_longitud,
-                  "fechaModificacion": fecha_mod_str,
-                  "coord_x": nuevo_x,
-                  "coord_y": nuevo_y,
-                  "coord_ant_x": nuevo_ant_x,
-                  "coord_ant_y": nuevo_ant_y,
-              },
-          )
-
-          for k in [x_key, y_key, ant_x_key, ant_y_key, map_key]:
-            if k in st.session_state:
-              del st.session_state[k]
-
-          st.success(f"¡Predio FID {row['fid']} actualizado con éxito!")
-          t.sleep(1)
-          st.rerun()
-        except Exception as ex:
-          st.error(f"Error al actualizar: {ex}")
-
-      if not es_operador:
-        st.markdown(
-            "<hr style='border: 0.5px solid rgba(255,0,0,0.2); margin: 20px 0;'>",
-            unsafe_allow_html=True,
-        )
-
-        if st.session_state.registro_to_delete == row["fid"]:
-          st.markdown(
-              f"<p style='color: #ff4d4d; font-size: 0.9rem; font-weight:"
-              f" bold;'>Para eliminar el registro FID {row['fid']} (Medidor ID:"
-              f" {row['medidorId']}), escribe la palabra 'delete':</p>",
-              unsafe_allow_html=True,
-          )
-          confirm_text = st.text_input(
-              "Confirmación de eliminación", key=f"input_del_text_{row['fid']}"
-          )
-
-          col_y, col_n = st.columns(2)
-          with col_y:
-            if st.button(
-                "Sí, eliminar definitivamente",
-                key=f"confirm_del_{row['fid']}",
-                use_container_width=True,
-            ):
-              if confirm_text.strip() == "delete":
-                try:
-                  ejecutar_sql(
-                      'DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid',
-                      {"fid": row["fid"]},
-                  )
-                  st.session_state.registro_to_delete = None
-                  st.success("Registro eliminado correctamente.")
-                  t.sleep(1)
-                  st.rerun()
-                except Exception as ex_del:
-                  st.error(f"Error al eliminar: {ex_del}")
-              else:
-                st.error(
-                    "Debes escribir exactamente la palabra 'delete' para"
-                    " confirmar."
-                )
-          with col_n:
-            if st.button(
-                "Cancelar",
-                key=f"cancel_del_{row['fid']}",
-                use_container_width=True,
-            ):
-              st.session_state.registro_to_delete = None
-              st.rerun()
-        else:
-          if st.button(
-              "🗑️ Eliminar este registro",
-              key=f"btn_del_{row['fid']}",
-              use_container_width=True,
-          ):
-            st.session_state.registro_to_delete = row["fid"]
-            st.rerun()
   else:
     st.info("No se encontró ningún registro para editar.")
 
 
+# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
+with st.sidebar:
+
+  st.markdown(
+      """
+        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
+            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  st.markdown(
+      f"""
+        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
+            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
+            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  opciones_menu = ["⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
+
+  if (
+      "active_tab" not in st.session_state
+      or st.session_state.active_tab not in opciones_menu
+  ):
+    st.session_state.active_tab = opciones_menu[0]
+
+  st.markdown(
+      "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
+      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
+      unsafe_allow_html=True,
+  )
+
+  for opcion in opciones_menu:
+    es_activa = st.session_state.active_tab == opcion
+    tipo_btn = "primary" if es_activa else "secondary"
+
+    if st.button(
+        opcion,
+        key=f"nav_{opcion}",
+        use_container_width=True,
+        type=tipo_btn,
+    ):
+      if st.session_state.active_tab != opcion:
+        st.session_state.active_tab = opcion
+        st.rerun()
+
+  # Botones de Acción en la Barra Lateral (Solo visibles en la pestaña Editar)
+  if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty:
+    st.markdown(
+        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
+        " margin-bottom: 10px;'>💾 Acciones de Registro</p>",
+        unsafe_allow_html=True,
+    )
+
+    if st.button("💾 Actualizar Registro", key="btn_act_sidebar", use_container_width=True):
+      try:
+        row_act = df_lev.iloc[0]
+        e_fid = row_act["fid"]
+        default_x = float(row_act["coord_x"]) if pd.notna(row_act["coord_x"]) else 0.0
+        default_y = float(row_act["coord_y"]) if pd.notna(row_act["coord_y"]) else 0.0
+
+        x_key = f"coord_x_input_{e_fid}"
+        y_key = f"coord_y_input_{e_fid}"
+        ant_x_key = f"coord_ant_x_input_{e_fid}"
+        ant_y_key = f"coord_ant_y_input_{e_fid}"
+
+        fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
+        
+        nuevo_x = st.session_state.get(x_key, default_x)
+        nuevo_y = st.session_state.get(y_key, default_y)
+        nuevo_ant_x = st.session_state.get(ant_x_key, 0.0)
+        nuevo_ant_y = st.session_state.get(ant_y_key, 0.0)
+        
+        hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
+        
+        sql_update = """
+                      UPDATE "Usuarios"."levantamientos" 
+                      SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
+                          domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
+                          longitud = :longitud, "precisionGps" = :precisionGps, 
+                          "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
+                          activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                          "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                          "fechaModificacion" = :fechaModificacion, 
+                          {geom_ant_sql}
+                          geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
+                      WHERE fid = :fid
+                  """.format(
+                      geom_ant_sql='geom_ant = ST_SetSRID(ST_MakePoint(:coord_ant_x, :coord_ant_y), 32613),' if hubo_cambio_coord else ''
+                  )
+
+        params_sql = {
+            "fid": e_fid,
+            "medidorId": st.session_state.get(f"medid_{e_fid}", str(row_act["medidorId"] or "")).strip(),
+            "serie": st.session_state.get(f"ser_{e_fid}", str(row_act["serie"] or "")) or None,
+            "toma": st.session_state.get(f"tom_{e_fid}", int(row_act["toma"] or 0)),
+            "domicilio": st.session_state.get(f"dom_{e_fid}", str(row_act["domicilio"] or "")) or None,
+            "colonia": st.session_state.get(f"col_{e_fid}", str(row_act["colonia"] or "")) or None,
+            "latitud": st.session_state.get(f"lat_{e_fid}", float(row_act["latitud"] or 21.8853)),
+            "longitud": st.session_state.get(f"lon_{e_fid}", float(row_act["longitud"] or -102.2916)),
+            "precisionGps": st.session_state.get(f"prec_{e_fid}", float(row_act["precisionGps"] or 0.0)),
+            "ajusteManual": st.session_state.get(f"ajust_{e_fid}", bool(row_act["ajusteManual"])),
+            "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_act["observaciones"] or "")) or None,
+            "activo": st.session_state.get(f"act_{e_fid}", bool(row_act["activo"])),
+            "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_act["Predio_Viv"] or "")) or None,
+            "Latitud": st.session_state.get(f"lat_{e_fid}", float(row_act["latitud"] or 21.8853)),
+            "Longitud": st.session_state.get(f"lon_{e_fid}", float(row_act["longitud"] or -102.2916)),
+            "fechaModificacion": fecha_mod_str,
+            "coord_x": nuevo_x,
+            "coord_y": nuevo_y,
+        }
+        if hubo_cambio_coord:
+          params_sql["coord_ant_x"] = nuevo_ant_x
+          params_sql["coord_ant_y"] = nuevo_ant_y
+
+        ejecutar_sql(sql_update, params_sql)
+
+        for k in [x_key, y_key, ant_x_key, ant_y_key, f"map_edit_preview_{e_fid}"]:
+          if k in st.session_state:
+            del st.session_state[k]
+
+        st.success(f"¡Predio FID {e_fid} actualizado con éxito!")
+        t.sleep(1)
+        st.rerun()
+      except Exception as ex:
+        st.error(f"Error al actualizar: {ex}")
+
+    if not es_operador:
+      if st.session_state.registro_to_delete == row_first["fid"]:
+        st.markdown(
+            f"<p style='color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-top: 8px;'>Escribe 'delete' para confirmar:</p>",
+            unsafe_allow_html=True,
+        )
+        confirm_text = st.text_input("Confirmación", key=f"input_del_sidebar_{row_first['fid']}")
+        c_y, c_n = st.columns(2)
+        with c_y:
+          if st.button("Sí, borrar", key="btn_yes_del", use_container_width=True):
+            if confirm_text.strip() == "delete":
+              try:
+                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid', {"fid": row_first["fid"]})
+                st.session_state.registro_to_delete = None
+                st.success("Registro eliminado.")
+                t.sleep(1)
+                st.rerun()
+              except Exception as ex_del:
+                st.error(f"Error: {ex_del}")
+            else:
+              st.error("Escribe 'delete'.")
+        with c_n:
+          if st.button("Cancelar", key="btn_cancel_del", use_container_width=True):
+            st.session_state.registro_to_delete = None
+            st.rerun()
+      else:
+        if st.button("🗑️ Eliminar Registro", key="btn_del_sidebar", use_container_width=True):
+          st.session_state.registro_to_delete = row_first["fid"]
+          st.rerun()
+
+  st.markdown(
+      "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
+      unsafe_allow_html=True,
+  )
+
+  df_sidebar_levantamientos, _ = obtener_datos(
+      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
+  )
+
+  if not df_sidebar_levantamientos.empty:
+    st.markdown(
+        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
+        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
+        unsafe_allow_html=True,
+    )
+
+    total_predios = len(df_sidebar_levantamientos)
+    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
+    inactivos_count = total_predios - activos_count
+
+    st.markdown(
+        f"""
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.6;">
+            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
+            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
+            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+  st.markdown("<br>", unsafe_allow_html=True)
+
+  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
+    st.session_state.autenticado = False
+    st.session_state.gestor_bd_autenticado = False
+    st.rerun()
+
+
 # 09 ----------------------------------------------------------------------------------- ZONA: AJUSTES MANUALES ---------------------------------------------------------------------------------------------
-elif st.session_state.active_tab == "🛠️ Ajustes Manuales":
+if st.session_state.active_tab == "🛠️ Ajustes Manuales":
   st.markdown(
       """
       <div style="margin-bottom: 20px;">
