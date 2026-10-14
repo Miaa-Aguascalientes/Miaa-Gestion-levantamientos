@@ -700,10 +700,17 @@ if st.session_state.active_tab == "⚙️ Editar":
 
       x_key = f"coord_x_input_{row['fid']}"
       y_key = f"coord_y_input_{row['fid']}"
+      ant_x_key = f"coord_ant_x_input_{row['fid']}"
+      ant_y_key = f"coord_ant_y_input_{row['fid']}"
+
       if x_key not in st.session_state:
         st.session_state[x_key] = default_x
       if y_key not in st.session_state:
         st.session_state[y_key] = default_y
+      if ant_x_key not in st.session_state:
+        st.session_state[ant_x_key] = default_ant_x
+      if ant_y_key not in st.session_state:
+        st.session_state[ant_y_key] = default_ant_y
 
       e_c1, e_c2, e_c3, e_c4 = st.columns(4)
       with e_c1:
@@ -839,6 +846,11 @@ if st.session_state.active_tab == "⚙️ Editar":
                 st.session_state[x_key] != new_x
                 or st.session_state[y_key] != new_y
             ):
+              # Respaldar la posición actual como anterior antes de cambiarla
+              st.session_state[ant_x_key] = st.session_state[x_key]
+              st.session_state[ant_y_key] = st.session_state[y_key]
+              
+              # Asignar la nueva posición
               st.session_state[x_key] = new_x
               st.session_state[y_key] = new_y
               st.rerun()
@@ -864,23 +876,19 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=y_key,
           )
 
-        # Campos de coordenadas anteriores sincronizados directamente con geom_ant
+        # Campos de coordenadas anteriores vinculados al session state para reflejar los cambios instantáneamente
         c_ant1, c_ant2 = st.columns(2)
         with c_ant1:
           st.number_input(
               "Coordenada X Anterior",
               format="%.2f",
-              value=default_ant_x,
-              disabled=True,
-              key=f"coord_ant_x_{row['fid']}",
+              key=ant_x_key,
           )
         with c_ant2:
           st.number_input(
               "Coordenada Y Anterior",
               format="%.3f",
-              value=default_ant_y,
-              disabled=True,
-              key=f"coord_ant_y_{row['fid']}",
+              key=ant_y_key,
           )
 
       e_observaciones = st.text_area(
@@ -902,8 +910,9 @@ if st.session_state.active_tab == "⚙️ Editar":
           
           nuevo_x = st.session_state[x_key]
           nuevo_y = st.session_state[y_key]
+          nuevo_ant_x = st.session_state[ant_x_key]
+          nuevo_ant_y = st.session_state[ant_y_key]
           
-          # Si el usuario cambió la posición actual, pasamos el valor que tenía 'geom' (default_x, default_y) hacia 'geom_ant'
           hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
           
           if hubo_cambio_coord:
@@ -916,7 +925,7 @@ if st.session_state.active_tab == "⚙️ Editar":
                               activo = :activo, "Predio_Viv" = :Predio_Viv, 
                               "Latitud" = :Latitud, "Longitud" = :Longitud, 
                               "fechaModificacion" = :fechaModificacion, 
-                              geom_ant = ST_SetSRID(ST_MakePoint(:orig_x, :orig_y), 32613),
+                              geom_ant = ST_SetSRID(ST_MakePoint(:coord_ant_x, :coord_ant_y), 32613),
                               geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
                           WHERE fid = :fid
                       """
@@ -955,16 +964,15 @@ if st.session_state.active_tab == "⚙️ Editar":
                   "fechaModificacion": fecha_mod_str,
                   "coord_x": nuevo_x,
                   "coord_y": nuevo_y,
-                  "orig_x": default_x,
-                  "orig_y": default_y,
+                  "coord_ant_x": nuevo_ant_x,
+                  "coord_ant_y": nuevo_ant_y,
               },
           )
 
           # Limpiamos el session state de las coordenadas para forzar la lectura fresca de la BD
-          if x_key in st.session_state:
-            del st.session_state[x_key]
-          if y_key in st.session_state:
-            del st.session_state[y_key]
+          for k in [x_key, y_key, ant_x_key, ant_y_key]:
+            if k in st.session_state:
+              del st.session_state[k]
 
           st.success(f"¡Predio FID {row['fid']} actualizado con éxito!")
           t.sleep(1)
