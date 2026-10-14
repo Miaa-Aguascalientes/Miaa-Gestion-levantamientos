@@ -598,6 +598,7 @@ if st.session_state.active_tab == "⚙️ Editar":
       y_key = f"coord_y_input_{row['fid']}"
       ant_x_key = f"coord_ant_x_input_{row['fid']}"
       ant_y_key = f"coord_ant_y_input_{row['fid']}"
+      ajust_key = f"ajust_{row['fid']}"
 
       if x_key not in st.session_state:
         st.session_state[x_key] = default_x
@@ -607,6 +608,8 @@ if st.session_state.active_tab == "⚙️ Editar":
         st.session_state[ant_x_key] = default_ant_x
       if ant_y_key not in st.session_state:
         st.session_state[ant_y_key] = default_ant_y
+      if ajust_key not in st.session_state:
+        st.session_state[ajust_key] = bool(row["ajusteManual"])
 
       map_key = f"map_edit_preview_{row['fid']}"
       if map_key in st.session_state and st.session_state[map_key] and st.session_state[map_key].get("last_clicked"):
@@ -621,6 +624,8 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[ant_y_key] = st.session_state[y_key]
           st.session_state[x_key] = new_x
           st.session_state[y_key] = new_y
+          # Activar Ajuste Manual por defecto al hacer clic en el mapa
+          st.session_state[ajust_key] = True
 
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
@@ -690,8 +695,7 @@ if st.session_state.active_tab == "⚙️ Editar":
           )
           st.checkbox(
               "Ajuste Manual",
-              value=bool(row["ajusteManual"]),
-              key=f"ajust_{row['fid']}",
+              key=ajust_key,
           )
           st.text_input(
               "Predio_Viv",
@@ -841,6 +845,7 @@ with st.sidebar:
         y_key = f"coord_y_input_{e_fid}"
         ant_x_key = f"coord_ant_x_input_{e_fid}"
         ant_y_key = f"coord_ant_y_input_{e_fid}"
+        ajust_key = f"ajust_{e_fid}"
 
         fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
         
@@ -877,7 +882,7 @@ with st.sidebar:
             "latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
             "longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
             "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
-            "ajusteManual": bool(st.session_state.get(f"ajust_{e_fid}", bool(row_first["ajusteManual"]))),
+            "ajusteManual": bool(st.session_state.get(ajust_key, bool(row_first["ajusteManual"]))),
             "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
             "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
             "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
@@ -893,7 +898,7 @@ with st.sidebar:
 
         ejecutar_sql(sql_update, params_sql)
 
-        for k in [x_key, y_key, ant_x_key, ant_y_key, f"map_edit_preview_{e_fid}"]:
+        for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, f"map_edit_preview_{e_fid}"]:
           if k in st.session_state:
             del st.session_state[k]
 
@@ -955,7 +960,7 @@ with st.sidebar:
 
     st.markdown(
         f"""
-        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.6;">
+        <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
             <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
             <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
             <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
