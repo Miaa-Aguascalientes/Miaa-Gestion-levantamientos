@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import folium
 from folium.plugins import Fullscreen, MarkerCluster
 import pandas as pd
+import pydeck as pdk
 from pyproj import Transformer
 from sqlalchemy import create_engine, text
 import streamlit as st
@@ -22,7 +23,7 @@ st.set_page_config(
 if "registro_to_delete" not in st.session_state:
   st.session_state.registro_to_delete = None
 if "active_tab" not in st.session_state:
-  st.session_state.active_tab = "⚙️ Editar"
+  st.session_state.active_tab = "📊 Dashboard General"
 if "autenticado" not in st.session_state:
   st.session_state.autenticado = False
 if "gestor_bd_autenticado" not in st.session_state:
@@ -504,6 +505,94 @@ COLUMNAS_LEV = """
     ST_X(geom_ant) as coord_ant_x, ST_Y(geom_ant) as coord_ant_y
 """
 
+# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
+with st.sidebar:
+
+  st.markdown(
+      """
+        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
+            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  st.markdown(
+      f"""
+        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
+            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
+            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  opciones_menu = ["📊 Dashboard General", "⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
+
+  if (
+      "active_tab" not in st.session_state
+      or st.session_state.active_tab not in opciones_menu
+  ):
+    st.session_state.active_tab = opciones_menu[0]
+
+  st.markdown(
+      "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
+      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
+      unsafe_allow_html=True,
+  )
+
+  for opcion in opciones_menu:
+    es_activa = st.session_state.active_tab == opcion
+    tipo_btn = "primary" if es_activa else "secondary"
+
+    if st.button(
+        opcion,
+        key=f"nav_{opcion}",
+        use_container_width=True,
+        type=tipo_btn,
+    ):
+      if st.session_state.active_tab != opcion:
+        st.session_state.active_tab = opcion
+        st.rerun()
+
+  df_sidebar_levantamientos, _ = obtener_datos(
+      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
+  )
+
+  if not df_sidebar_levantamientos.empty:
+    st.markdown(
+        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
+        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
+        unsafe_allow_html=True,
+    )
+
+    total_predios = len(df_sidebar_levantamientos)
+    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
+    inactivos_count = total_predios - activos_count
+
+    st.markdown(
+        f"""
+        <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
+            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
+            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
+            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+  st.markdown("<br>", unsafe_allow_html=True)
+
+  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
+    st.session_state.autenticado = False
+    st.session_state.gestor_bd_autenticado = False
+    st.rerun()
+
+
 # 08 -------------------------------------------------------------------------------------- EDITAR Y ELIMINAR ----------------------------------------------------------------------------------------------
 
 df_lev = pd.DataFrame()
@@ -731,8 +820,6 @@ if st.session_state.active_tab == "⚙️ Editar":
                 icon=folium.Icon(color="cyan", icon="info-sign"),
             ).add_to(m_ed)
 
-          # LayerControl removido ya que solo hay una capa activa (Vista Satélite de Google)
-
           st_folium(
               m_ed,
               width="100%",
@@ -750,213 +837,53 @@ if st.session_state.active_tab == "⚙️ Editar":
     st.info("No se encontró ningún registro para editar.")
 
 
-# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
-with st.sidebar:
-
+# 08B ---------------------------------------------------------------------------------- SECCIÓN: DASHBOARD GENERAL ---------------------------------------------------------------------------------------
+if st.session_state.active_tab == "📊 Dashboard General":
   st.markdown(
       """
-        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
-            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
-        </div>
-    """,
+      <div style="margin-bottom: 20px;">
+          <h2 style="color: #00E5FF; font-size: 1.5rem; font-weight: 800; margin-bottom: 5px;">📊 Dashboard General de Levantamentos</h2>
+          <p style="color: #94A3B8; font-size: 0.9rem;">Resumen estadístico, gráficos de instalaciones y mapa 3D de polígonos.</p>
+      </div>
+      """,
       unsafe_allow_html=True,
   )
 
-  st.markdown(
-      f"""
-        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
-            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
-            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
-        </div>
-    """,
-      unsafe_allow_html=True,
+  df_dash, err_dash = obtener_datos(
+      'SELECT fid, "fechaRegistro", "ajusteManual" FROM "Usuarios"."levantamientos"'
   )
 
-  opciones_menu = ["⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
-
-  if (
-      "active_tab" not in st.session_state
-      or st.session_state.active_tab not in opciones_menu
-  ):
-    st.session_state.active_tab = opciones_menu[0]
-
-  st.markdown(
-      "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
-      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
-      unsafe_allow_html=True,
+  total_reg = len(df_dash) if not err_dash and not df_dash.empty else 0
+  pendientes_ajuste = (
+      len(df_dash[df_dash["ajusteManual"] == False])
+      if not err_dash and not df_dash.empty
+      else 0
   )
 
-  for opcion in opciones_menu:
-    es_activa = st.session_state.active_tab == opcion
-    tipo_btn = "primary" if es_activa else "secondary"
-
-    if st.button(
-        opcion,
-        key=f"nav_{opcion}",
-        use_container_width=True,
-        type=tipo_btn,
-    ):
-      if st.session_state.active_tab != opcion:
-        st.session_state.active_tab = opcion
-        st.rerun()
-
-  if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_first is not None:
-    st.markdown(
-        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
-        " margin-bottom: 10px;'>💾 Acciones de Registro</p>",
-        unsafe_allow_html=True,
-    )
-
-    if st.button("🔄 Restablecer Originales", key="btn_reset_sidebar", use_container_width=True):
-      e_fid = int(row_first["fid"])
-      x_key = f"coord_x_input_{e_fid}"
-      y_key = f"coord_y_input_{e_fid}"
-      ant_x_key = f"coord_ant_x_input_{e_fid}"
-      ant_y_key = f"coord_ant_y_input_{e_fid}"
-      ajust_key = f"ajust_{e_fid}"
-      map_key = f"map_edit_preview_{e_fid}"
-
-      for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, map_key]:
-        if k in st.session_state:
-          del st.session_state[k]
-
-      st.success("¡Datos restablecidos a sus valores originales!")
-      t.sleep(0.8)
-      st.rerun()
-
-    if st.button("💾 Actualizar Registro", key="btn_act_sidebar", use_container_width=True):
-      try:
-        e_fid = int(row_first["fid"])
-        default_x = float(row_first["coord_x"]) if pd.notna(row_first["coord_x"]) else 0.0
-        default_y = float(row_first["coord_y"]) if pd.notna(row_first["coord_y"]) else 0.0
-
-        x_key = f"coord_x_input_{e_fid}"
-        y_key = f"coord_y_input_{e_fid}"
-        ant_x_key = f"coord_ant_x_input_{e_fid}"
-        ant_y_key = f"coord_ant_y_input_{e_fid}"
-        ajust_key = f"ajust_{e_fid}"
-
-        fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
-        
-        nuevo_x = float(st.session_state.get(x_key, default_x))
-        nuevo_y = float(st.session_state.get(y_key, default_y))
-        nuevo_ant_x = float(st.session_state.get(ant_x_key, 0.0))
-        nuevo_ant_y = float(st.session_state.get(ant_y_key, 0.0))
-        
-        hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
-        
-        sql_update = """
-                      UPDATE "Usuarios"."levantamientos" 
-                      SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
-                          domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
-                          longitud = :longitud, "precisionGps" = :precisionGps, 
-                          "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                          activo = :activo, "Predio_Viv" = :Predio_Viv, 
-                          "Latitud" = :Latitud, "Longitud" = :Longitud, 
-                          "fechaModificacion" = :fechaModificacion, 
-                          {geom_ant_sql}
-                          geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
-                      WHERE fid = :fid
-                  """.format(
-                      geom_ant_sql='geom_ant = ST_SetSRID(ST_MakePoint(:coord_ant_x, :coord_ant_y), 32613),' if hubo_cambio_coord else ''
-                  )
-
-        params_sql = {
-            "fid": e_fid,
-            "medidorId": st.session_state.get(f"medid_{e_fid}", str(row_first["medidorId"] or "")).strip(),
-            "serie": st.session_state.get(f"ser_{e_fid}", str(row_first["serie"] or "")) or None,
-            "toma": int(st.session_state.get(f"tom_{e_fid}", int(row_first["toma"] or 0))),
-            "domicilio": st.session_state.get(f"dom_{e_fid}", str(row_first["domicilio"] or "")) or None,
-            "colonia": st.session_state.get(f"col_{e_fid}", str(row_first["colonia"] or "")) or None,
-            "latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
-            "longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
-            "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
-            "ajusteManual": bool(st.session_state.get(ajust_key, bool(row_first["ajusteManual"]))),
-            "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
-            "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
-            "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
-            "Latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
-            "Longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
-            "fechaModificacion": fecha_mod_str,
-            "coord_x": nuevo_x,
-            "coord_y": nuevo_y,
-        }
-        if hubo_cambio_coord:
-          params_sql["coord_ant_x"] = nuevo_ant_x
-          params_sql["coord_ant_y"] = nuevo_ant_y
-
-        ejecutar_sql(sql_update, params_sql)
-
-        for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, f"map_edit_preview_{e_fid}"]:
-          if k in st.session_state:
-            del st.session_state[k]
-
-        st.success(f"¡Predio FID {e_fid} actualizado con éxito!")
-        t.sleep(1)
-        st.rerun()
-      except Exception as ex:
-        st.error(f"Error al actualizar: {ex}")
-
-    if not es_operador:
-      if st.session_state.registro_to_delete == row_first["fid"]:
-        st.markdown(
-            f"<p style='color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-top: 8px;'>Escribe 'delete' para confirmar:</p>",
-            unsafe_allow_html=True,
-        )
-        confirm_text = st.text_input("Confirmación", key=f"input_del_sidebar_{row_first['fid']}")
-        c_y, c_n = st.columns(2)
-        with c_y:
-          if st.button("Sí, borrar", key="btn_yes_del", use_container_width=True):
-            if confirm_text.strip() == "delete":
-              try:
-                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid', {"fid": int(row_first["fid"])})
-                st.session_state.registro_to_delete = None
-                st.success("Registro eliminado.")
-                t.sleep(1)
-                st.rerun()
-              except Exception as ex_del:
-                st.error(f"Error: {ex_del}")
-            else:
-              st.error("Escribe 'delete'.")
-        with c_n:
-          if st.button("Cancelar", key="btn_cancel_del", use_container_width=True):
-            st.session_state.registro_to_delete = None
-            st.rerun()
-      else:
-        if st.button("🗑️ Eliminar Registro", key="btn_del_sidebar", use_container_width=True):
-          st.session_state.registro_to_delete = row_first["fid"]
-          st.rerun()
-
-  st.markdown(
-      "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-      unsafe_allow_html=True,
-  )
-
-  df_sidebar_levantamientos, _ = obtener_datos(
-      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
-  )
-
-  if not df_sidebar_levantamientos.empty:
-    st.markdown(
-        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
-        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
-        unsafe_allow_html=True,
-    )
-
-    total_predios = len(df_sidebar_levantamientos)
-    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
-    inactivos_count = total_predios - activos_count
-
+  # Tarjetas superiores de métricas estilo MIAA
+  c_m1, c_m2 = st.columns(2)
+  with c_m1:
     st.markdown(
         f"""
-        <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
-            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
-            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
-            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #00E5FF; border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos</div>
+            <div style="color: #00E5FF; font-size: 2.2rem; font-weight: 800;">{total_reg:,}</div>
+            <div style="color: #94A3B8; font-size: 0.75rem; margin-top: 5px;">Total</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+  with c_m2:
+    st.markdown(
+        f"""
+        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-left: 4px solid #3B82F6; border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div style="color: #94A3B8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px;">Levantamientos Pendientes por Ajuste</div>
+            <div style="color: #F8FAFC; font-size: 0.8rem; margin-bottom: 10px;">Requieren ajuste manual de coordenadas</div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 800;">{pendientes_ajuste:,} pendientes</div>
+                <div style="color: #94A3B8; font-size: 0.9rem;">Sin ajuste manual: <b>{pendientes_ajuste:,}</b></div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -964,10 +891,110 @@ with st.sidebar:
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
-    st.session_state.autenticado = False
-    st.session_state.gestor_bd_autenticado = False
-    st.rerun()
+  # Gráficas: Instalaciones por Día e Instalaciones por Mes
+  col_g1, col_g2 = st.columns([1.6, 1], gap="large")
+
+  with col_g1:
+    st.markdown(
+        "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Instalaciones por Día</h4>",
+        unsafe_allow_html=True,
+    )
+    if not err_dash and not df_dash.empty:
+      df_dash["fecha_dt"] = pd.to_datetime(
+          df_dash["fechaRegistro"], errors="coerce"
+      )
+      df_dias = (
+          df_dash.groupby(df_dash["fecha_dt"].dt.date)
+          .size()
+          .reset_index(name="count")
+      )
+      df_dias = df_dias.dropna().sort_values("fecha_dt")
+      df_dias["fecha_str"] = pd.to_datetime(df_dias["fecha_dt"]).dt.strftime(
+          "%d/%m/%Y"
+      )
+
+      chart_data_dias = pd.DataFrame(
+          {"Instalaciones": df_dias["count"].values},
+          index=df_dias["fecha_str"].values,
+      )
+      st.bar_chart(chart_data_dias, color="#00B4D8", height=320)
+    else:
+      st.info("No hay datos suficientes para mostrar la gráfica por día.")
+
+  with col_g2:
+    st.markdown(
+        "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Instalaciones por Mes</h4>",
+        unsafe_allow_html=True,
+    )
+    if not err_dash and not df_dash.empty:
+      df_dash["mes_anio"] = pd.to_datetime(
+          df_dash["fechaRegistro"], errors="coerce"
+      ).dt.to_period("M")
+      df_meses = (
+          df_dash.groupby("mes_anio").size().reset_index(name="count")
+      )
+      df_meses = df_meses.dropna().sort_values("mes_anio", ascending=False)
+      df_meses["mes_str"] = df_meses["mes_anio"].dt.strftime("%B %Y")
+
+      chart_data_meses = pd.DataFrame(
+          {"Instalaciones": df_meses["count"].values},
+          index=df_meses["mes_str"].values,
+      )
+      st.bar_chart(chart_data_meses, color="#0284C7", height=320, horizontal=True)
+    else:
+      st.info("No hay datos suficientes para mostrar la gráfica por mes.")
+
+  st.markdown("<br>", unsafe_allow_html=True)
+
+  # Mapa 3D de Polígonos de Instalación
+  st.markdown(
+      "<h4 style='color: #00E5FF; font-size: 1.1rem; font-weight: 700;'>Mapa de Polígonos de Instalación</h4>",
+      unsafe_allow_html=True,
+  )
+
+  df_map_3d, err_map_3d = obtener_datos("""
+        SELECT fid, "medidorId", ST_X(geom) as lon, ST_Y(geom) as lat 
+        FROM "Usuarios"."levantamientos" 
+        WHERE geom IS NOT NULL 
+        LIMIT 500
+    """)
+
+  if not err_map_3d and not df_map_3d.empty:
+    puntos_3d = []
+    for _, r in df_map_3d.iterrows():
+      if pd.notna(r["lon"]) and pd.notna(r["lat"]):
+        lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
+        puntos_3d.append({
+            "position": [lon_wgs, lat_wgs],
+            "elevation": 150,
+            "color": [0, 212, 255, 180],
+        })
+
+    view_state = pdk.ViewState(
+        latitude=21.8853, longitude=-102.2916, zoom=12, pitch=45, bearing=0
+    )
+
+    layer = pdk.Layer(
+        "ColumnLayer",
+        data=puntos_3d,
+        get_position="position",
+        get_elevation="elevation",
+        elevation_scale=5,
+        radius=50,
+        get_fill_color="color",
+        pickable=True,
+        auto_highlight=True,
+    )
+
+    r_deck = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        tooltip={"text": "Medidor ID: {medidorId}"},
+        map_style=pdk.map_styles.DARK,
+    )
+    st.pydeck_chart(r_deck)
+  else:
+    st.info("No hay geometrías disponibles para renderizar el mapa 3D.")
 
 
 # 09 ----------------------------------------------------------------------------------- ZONA: AJUSTES MANUALES ---------------------------------------------------------------------------------------------
