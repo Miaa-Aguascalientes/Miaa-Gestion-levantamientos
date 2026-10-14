@@ -698,14 +698,6 @@ if st.session_state.active_tab == "⚙️ Editar":
       default_ant_x = float(row["coord_ant_x"]) if pd.notna(row["coord_ant_x"]) else 0.0
       default_ant_y = float(row["coord_ant_y"]) if pd.notna(row["coord_ant_y"]) else 0.0
 
-      # Almacenar la posición original de BD en session state antes de cualquier interacción
-      orig_x_key = f"orig_x_val_{row['fid']}"
-      orig_y_key = f"orig_y_val_{row['fid']}"
-      if orig_x_key not in st.session_state:
-        st.session_state[orig_x_key] = default_x
-      if orig_y_key not in st.session_state:
-        st.session_state[orig_y_key] = default_y
-
       x_key = f"coord_x_input_{row['fid']}"
       y_key = f"coord_y_input_{row['fid']}"
       if x_key not in st.session_state:
@@ -872,7 +864,7 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=y_key,
           )
 
-        # Muestra la coordenada anterior registrada en la BD o respalda la posición previa
+        # Campos de coordenadas anteriores sincronizados directamente con geom_ant
         c_ant1, c_ant2 = st.columns(2)
         with c_ant1:
           st.number_input(
@@ -911,10 +903,8 @@ if st.session_state.active_tab == "⚙️ Editar":
           nuevo_x = st.session_state[x_key]
           nuevo_y = st.session_state[y_key]
           
-          db_original_x = st.session_state[orig_x_key]
-          db_original_y = st.session_state[orig_y_key]
-          
-          hubo_cambio_coord = (nuevo_x != db_original_x) or (nuevo_y != db_original_y)
+          # Si el usuario cambió la posición actual, pasamos el valor que tenía 'geom' (default_x, default_y) hacia 'geom_ant'
+          hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
           
           if hubo_cambio_coord:
             sql_update = """
@@ -965,15 +955,16 @@ if st.session_state.active_tab == "⚙️ Editar":
                   "fechaModificacion": fecha_mod_str,
                   "coord_x": nuevo_x,
                   "coord_y": nuevo_y,
-                  "orig_x": db_original_x,
-                  "orig_y": db_original_y,
+                  "orig_x": default_x,
+                  "orig_y": default_y,
               },
           )
 
-          # Limpiamos las llaves guardadas en session state para forzar la recarga con los nuevos datos
-          for k in [x_key, y_key, orig_x_key, orig_y_key]:
-            if k in st.session_state:
-              del st.session_state[k]
+          # Limpiamos el session state de las coordenadas para forzar la lectura fresca de la BD
+          if x_key in st.session_state:
+            del st.session_state[x_key]
+          if y_key in st.session_state:
+            del st.session_state[y_key]
 
           st.success(f"¡Predio FID {row['fid']} actualizado con éxito!")
           t.sleep(1)
