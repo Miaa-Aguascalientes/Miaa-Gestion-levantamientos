@@ -557,6 +557,9 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
+  # Variable global temporal para el row_first si estamos en Editar
+  # (Se evalúa abajo al cargar la pestaña Editar)
+
   df_sidebar_levantamientos, _ = obtener_datos(
       'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
   )
@@ -838,6 +841,139 @@ if st.session_state.active_tab == "⚙️ Editar":
   else:
     st.info("No se encontró ningún registro para editar.")
 
+# Renderizar botones de acción en la barra lateral si estamos en la pestaña Editar
+if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_first is not None:
+  with st.sidebar:
+    st.markdown(
+        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
+        " margin-bottom: 10px;'>💾 Acciones de Registro</p>",
+        unsafe_allow_html=True,
+    )
+
+    if st.button("🔄 Restablecer Originales", key="btn_reset_sidebar", use_container_width=True):
+      e_fid = int(row_first["fid"])
+      x_key = f"coord_x_input_{e_fid}"
+      y_key = f"coord_y_input_{e_fid}"
+      ant_x_key = f"coord_ant_x_input_{e_fid}"
+      ant_y_key = f"coord_ant_y_input_{e_fid}"
+      ajust_key = f"ajust_{e_fid}"
+      map_key = f"map_edit_preview_{e_fid}"
+
+      for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, map_key]:
+        if k in st.session_state:
+          del st.session_state[k]
+
+      st.success("¡Datos restablecidos a sus valores originales!")
+      t.sleep(0.8)
+      st.rerun()
+
+    if st.button("💾 Actualizar Registro", key="btn_act_sidebar", use_container_width=True):
+      try:
+        e_fid = int(row_first["fid"])
+        default_x = float(row_first["coord_x"]) if pd.notna(row_first["coord_x"]) else 0.0
+        default_y = float(row_first["coord_y"]) if pd.notna(row_first["coord_y"]) else 0.0
+
+        x_key = f"coord_x_input_{e_fid}"
+        y_key = f"coord_y_input_{e_fid}"
+        ant_x_key = f"coord_ant_x_input_{e_fid}"
+        ant_y_key = f"coord_ant_y_input_{e_fid}"
+        ajust_key = f"ajust_{e_fid}"
+
+        fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
+        
+        nuevo_x = float(st.session_state.get(x_key, default_x))
+        nuevo_y = float(st.session_state.get(y_key, default_y))
+        nuevo_ant_x = float(st.session_state.get(ant_x_key, 0.0))
+        nuevo_ant_y = float(st.session_state.get(ant_y_key, 0.0))
+        
+        hubo_cambio_coord = (nuevo_x != default_x) or (nuevo_y != default_y)
+        
+        sql_update = """
+                      UPDATE "Usuarios"."levantamientos" 
+                      SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
+                          domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
+                          longitud = :longitud, "precisionGps" = :precisionGps, 
+                          "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
+                          activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                          "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                          "fechaModificacion" = :fechaModificacion, 
+                          {geom_ant_sql}
+                          geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
+                      WHERE fid = :fid
+                  """.format(
+                      geom_ant_sql='geom_ant = ST_SetSRID(ST_MakePoint(:coord_ant_x, :coord_ant_y), 32613),' if hubo_cambio_coord else ''
+                  )
+
+        params_sql = {
+            "fid": e_fid,
+            "medidorId": st.session_state.get(f"medid_{e_fid}", str(row_first["medidorId"] or "")).strip(),
+            "serie": st.session_state.get(f"ser_{e_fid}", str(row_first["serie"] or "")) or None,
+            "toma": int(st.session_state.get(f"tom_{e_fid}", int(row_first["toma"] or 0))),
+            "domicilio": st.session_state.get(f"dom_{e_fid}", str(row_first["domicilio"] or "")) or None,
+            "colonia": st.session_state.get(f"col_{e_fid}", str(row_first["colonia"] or "")) or None,
+            "latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
+            "longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
+            "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
+            "ajusteManual": bool(st.session_state.get(ajust_key, bool(row_first["ajusteManual"]))),
+            "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
+            "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
+            "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
+            "Latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
+            "Longitud": float(st.session_state.get(f"lon_{e_fid}", float(row_first["longitud"] or -102.2916))),
+            "fechaModificacion": fecha_mod_str,
+            "coord_x": nuevo_x,
+            "coord_y": nuevo_y,
+        }
+        if hubo_cambio_coord:
+          params_sql["coord_ant_x"] = nuevo_ant_x
+          params_sql["coord_ant_y"] = nuevo_ant_y
+
+        ejecutar_sql(sql_update, params_sql)
+
+        for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, f"map_edit_preview_{e_fid}"]:
+          if k in st.session_state:
+            del st.session_state[k]
+
+        st.success(f"¡Predio FID {e_fid} actualizado con éxito!")
+        t.sleep(1)
+        st.rerun()
+      except Exception as ex:
+        st.error(f"Error al actualizar: {ex}")
+
+    if not es_operador:
+      if st.session_state.registro_to_delete == row_first["fid"]:
+        st.markdown(
+            f"<p style='color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-top: 8px;'>Escribe 'delete' para confirmar:</p>",
+            unsafe_allow_html=True,
+        )
+        confirm_text = st.text_input("Confirmación", key=f"input_del_sidebar_{row_first['fid']}")
+        c_y, c_n = st.columns(2)
+        with c_y:
+          if st.button("Sí, borrar", key="btn_yes_del", use_container_width=True):
+            if confirm_text.strip() == "delete":
+              try:
+                ejecutar_sql('DELETE FROM "Usuarios"."levantamientos" WHERE fid = :fid', {"fid": int(row_first["fid"])})
+                st.session_state.registro_to_delete = None
+                st.success("Registro eliminado.")
+                t.sleep(1)
+                st.rerun()
+              except Exception as ex_del:
+                st.error(f"Error: {ex_del}")
+            else:
+              st.error("Escribe 'delete'.")
+        with c_n:
+          if st.button("Cancelar", key="btn_cancel_del", use_container_width=True):
+            st.session_state.registro_to_delete = None
+            st.rerun()
+      else:
+        if st.button("🗑️ Eliminar Registro", key="btn_del_sidebar", use_container_width=True):
+          st.session_state.registro_to_delete = row_first["fid"]
+          st.rerun()
+
 
 # 08B ---------------------------------------------------------------------------------- SECCIÓN: DASHBOARD GENERAL ---------------------------------------------------------------------------------------
 if st.session_state.active_tab == "📊 Dashboard General":
@@ -928,7 +1064,6 @@ if st.session_state.active_tab == "📊 Dashboard General":
           .reset_index(name="count")
       )
       df_dias = df_dias.dropna().sort_values("fecha_dt")
-      # Formato tipo mes abreviado estilo ej. "11-ago"
       df_dias["fecha_str"] = pd.to_datetime(df_dias["fecha_dt"]).dt.strftime(
           "%d-%b"
       ).str.lower()
