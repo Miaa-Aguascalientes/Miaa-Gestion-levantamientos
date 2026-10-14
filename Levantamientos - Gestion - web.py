@@ -712,88 +712,104 @@ if st.session_state.active_tab == "⚙️ Editar":
       if ant_y_key not in st.session_state:
         st.session_state[ant_y_key] = default_ant_y
 
-      e_c1, e_c2, e_c3, e_c4 = st.columns(4)
-      with e_c1:
-        st.text_input(
-            "FID",
-            value=str(row["fid"] or 0),
-            disabled=True,
-            key=f"fid_bloq_{row['fid']}",
-        )
-      with e_c2:
-        e_medidor_id = st.text_input(
-            "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
-        )
-      with e_c3:
-        e_serie = st.text_input(
-            "Serie",
-            value=str(row["serie"] or ""),
-            key=f"ser_{row['fid']}",
-        )
-      with e_c4:
-        e_toma = st.number_input(
-            "Toma",
-            value=int(row["toma"] or 0),
-            key=f"tom_{row['fid']}",
-        )
+      # Layout principal: Izquierda con todos los campos organizados en 2 columnas, Derecha con el mapa grande
+      col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
-      e_c5, e_c6, e_c7, e_c8 = st.columns(4)
-      with e_c5:
-        e_domicilio = st.text_input(
-            "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
-        )
-      with e_c6:
-        e_colonia = st.text_input(
-            "Colonia",
-            value=str(row["colonia"] or ""),
-            key=f"col_{row['fid']}",
-        )
-      with e_c7:
-        e_latitud = st.number_input(
-            "Latitud",
-            format="%.6f",
-            value=float(row["latitud"] or 21.8853),
-            key=f"lat_{row['fid']}",
-        )
-      with e_c8:
-        e_longitud = st.number_input(
-            "Longitud",
-            format="%.6f",
-            value=float(row["longitud"] or -102.2916),
-            key=f"lon_{row['fid']}",
-        )
+      with col_inputs_left:
+        # Sub-columnas internas para acomodar todos los inputs limpios en 2 columnas
+        ic1, ic2 = st.columns(2)
+        with ic1:
+          st.text_input(
+              "FID",
+              value=str(row["fid"] or 0),
+              disabled=True,
+              key=f"fid_bloq_{row['fid']}",
+          )
+          e_serie = st.text_input(
+              "Serie",
+              value=str(row["serie"] or ""),
+              key=f"ser_{row['fid']}",
+          )
+          e_domicilio = st.text_input(
+              "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
+          )
+          e_latitud = st.number_input(
+              "Latitud",
+              format="%.6f",
+              value=float(row["latitud"] or 21.8853),
+              key=f"lat_{row['fid']}",
+          )
+          e_precision = st.number_input(
+              "Precisión GPS",
+              value=float(row["precisionGps"] or 0.0),
+              key=f"prec_{row['fid']}",
+          )
+          e_activo = st.checkbox(
+              "Activo",
+              value=bool(row["activo"]),
+              key=f"act_{row['fid']}",
+          )
+          e_coord_x = st.number_input(
+              "Coordenada X",
+              format="%.2f",
+              key=x_key,
+          )
+          e_coord_ant_x = st.number_input(
+              "Coordenada X Anterior",
+              format="%.2f",
+              key=ant_x_key,
+          )
 
-      e_c9, e_c10, e_c11, e_c12 = st.columns(4)
-      with e_c9:
-        e_precision = st.number_input(
-            "Precisión GPS",
-            value=float(row["precisionGps"] or 0.0),
-            key=f"prec_{row['fid']}",
-        )
-      with e_c10:
-        e_ajuste = st.checkbox(
-            "Ajuste Manual",
-            value=bool(row["ajusteManual"]),
-            key=f"ajust_{row['fid']}",
-        )
-      with e_c11:
-        e_activo = st.checkbox(
-            "Activo",
-            value=bool(row["activo"]),
-            key=f"act_{row['fid']}",
-        )
-      with e_c12:
-        e_predio_viv = st.text_input(
-            "Predio_Viv",
-            value=str(row["Predio_Viv"] or ""),
-            key=f"pviv_{row['fid']}",
-        )
+        with ic2:
+          e_medidor_id = st.text_input(
+              "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
+          )
+          e_toma = st.number_input(
+              "Toma",
+              value=int(row["toma"] or 0),
+              key=f"tom_{row['fid']}",
+          )
+          e_colonia = st.text_input(
+              "Colonia",
+              value=str(row["colonia"] or ""),
+              key=f"col_{row['fid']}",
+          )
+          e_longitud = st.number_input(
+              "Longitud",
+              format="%.6f",
+              value=float(row["longitud"] or -102.2916),
+              key=f"lon_{row['fid']}",
+          )
+          e_ajuste = st.checkbox(
+              "Ajuste Manual",
+              value=bool(row["ajusteManual"]),
+              key=f"ajust_{row['fid']}",
+          )
+          e_predio_viv = st.text_input(
+              "Predio_Viv",
+              value=str(row["Predio_Viv"] or ""),
+              key=f"pviv_{row['fid']}",
+          )
+          e_coord_y = st.number_input(
+              "Coordenada Y",
+              format="%.3f",
+              key=y_key,
+          )
+          e_coord_ant_y = st.number_input(
+              "Coordenada Y Anterior",
+              format="%.3f",
+              key=ant_y_key,
+          )
 
-      col_coord_left, col_map_right = st.columns([1, 1])
+        e_observaciones = st.text_area(
+            "Observaciones",
+            value=str(row["observaciones"] or ""),
+            key=f"obs_{row['fid']}",
+        )
 
       with col_map_right:
         st.markdown(
-            "<p style='color: #00E5FF; font-size: 0.8rem; font-weight: 700;"
+            "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
             " margin-top: 0px;'>🗺️ Ubicación Geográfica (geom) - Haga clic en el"
             " mapa para actualizar coordenadas automáticamente</p>",
             unsafe_allow_html=True,
@@ -807,7 +823,7 @@ if st.session_state.active_tab == "⚙️ Editar":
                 st.session_state[x_key], st.session_state[y_key]
             )
             m_ed = folium.Map(
-                location=[lat_ed, lon_ed], zoom_start=16, control_scale=True
+                location=[lat_ed, lon_ed], zoom_start=17, control_scale=True
             )
           else:
             m_ed = folium.Map(
@@ -828,10 +844,11 @@ if st.session_state.active_tab == "⚙️ Editar":
             ).add_to(m_ed)
 
           folium.LayerControl(collapsed=False).add_to(m_ed)
+          # Mapa con mayor altura para aprovechar el espacio de la derecha
           map_data_ed = st_folium(
               m_ed,
               width="100%",
-              height=325,
+              height=540,
               key=f"map_edit_preview_{row['fid']}",
               returned_objects=["last_clicked"],
           )
@@ -857,41 +874,6 @@ if st.session_state.active_tab == "⚙️ Editar":
               "Haga clic en el mapa para actualizar la posición geográfica."
               f" ({e_map_ed})"
           )
-
-      with col_coord_left:
-        cx1, cx2 = st.columns(2)
-        with cx1:
-          e_coord_x = st.number_input(
-              "Coordenada X",
-              format="%.2f",
-              key=x_key,
-          )
-        with cx2:
-          e_coord_y = st.number_input(
-              "Coordenada Y",
-              format="%.3f",
-              key=y_key,
-          )
-
-        c_ant1, c_ant2 = st.columns(2)
-        with c_ant1:
-          st.number_input(
-              "Coordenada X Anterior",
-              format="%.2f",
-              key=ant_x_key,
-          )
-        with c_ant2:
-          st.number_input(
-              "Coordenada Y Anterior",
-              format="%.3f",
-              key=ant_y_key,
-          )
-
-      e_observaciones = st.text_area(
-          "Observaciones",
-          value=str(row["observaciones"] or ""),
-          key=f"obs_{row['fid']}",
-      )
 
       st.markdown("<br>", unsafe_allow_html=True)
       actualizar_click = st.button(
@@ -1063,7 +1045,6 @@ elif st.session_state.active_tab == "🛠️ Ajustes Manuales":
   else:
     st.success(f"Se encontraron {len(df_manuales)} registros con ajuste manual.")
     
-    # Mostrar tabla limpia con columnas clave
     df_mostrar = df_manuales[[
         "fid", "medidorId", "serie", "toma", "domicilio", "colonia", 
         "coord_x", "coord_y", "coord_ant_x", "coord_ant_y", "fechaModificacion"
@@ -1114,7 +1095,6 @@ elif st.session_state.active_tab == "⚠️ Series Duplicadas":
     with col_btn_limpiar:
       if st.button("🧹 Eliminar Duplicados (Conservar el menor FID)", use_container_width=True):
         try:
-          # Consulta SQL para eliminar duplicados conservando el de menor fid por cada serie
           sql_delete_dups = """
                         DELETE FROM "Usuarios"."levantamientos" 
                         WHERE fid NOT IN (
