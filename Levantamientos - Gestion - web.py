@@ -705,9 +705,11 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      col_inputs_left, col_map_right = st.columns([1.8, 1.2], gap="large")
+      # Se respeta exactamente la proporción original [1.1, 1.2] para que el ancho del mapa no se afecte
+      col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
+        # Dividimos los inputs en 3 columnas internas
         ic1, ic2, ic3 = st.columns(3)
 
         with ic1:
