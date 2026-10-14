@@ -743,7 +743,7 @@ if st.session_state.active_tab == "📍 Registros":
 
         with st.expander("🔍 Ver detalles completos del levantamiento"):
           geom_str = (
-              f"POINT ({row['coord_x']} {row['coord_y'])})"
+              f"POINT ({row['coord_x']} {row['coord_y']})"
               if pd.notna(row["coord_x"]) and pd.notna(row["coord_y"])
               else "Sin geometría"
           )
