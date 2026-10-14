@@ -629,7 +629,8 @@ COLUMNAS_LEV = """
     fid, "medidorId", serie, toma, domicilio, colonia, latitud, longitud, "precisionGps", 
     "ajusteManual", observaciones, "usuarioNombre", "fechaRegistro", "fechaModificacion", 
     activo, "Predio_Viv", "Latitud", "Longitud", "_Ultima_actualizacion",
-    ST_X(geom) as coord_x, ST_Y(geom) as coord_y
+    ST_X(geom) as coord_x, ST_Y(geom) as coord_y,
+    ST_X(geom_ant) as coord_ant_x, ST_Y(geom_ant) as coord_ant_y
 """
 
 # 08 -------------------------------------------------------------------------------------- EDITAR Y ELIMINAR ----------------------------------------------------------------------------------------------
@@ -693,6 +694,10 @@ if st.session_state.active_tab == "⚙️ Editar":
       e_fid = row["fid"]
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
+
+      # Guardamos el valor original actual de la BD para respaldarlo si cambia
+      db_original_x = default_x
+      db_original_y = default_y
 
       x_key = f"coord_x_input_{row['fid']}"
       y_key = f"coord_y_input_{row['fid']}"
@@ -876,19 +881,43 @@ if st.session_state.active_tab == "⚙️ Editar":
       if actualizar_click:
         try:
           fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
+          
+          # Verificamos si las coordenadas cambiaron para respaldarlas en geom_ant
+          nuevo_x = st.session_state[x_key]
+          nuevo_y = st.session_state[y_key]
+          
+          hubo_cambio_coord = (nuevo_x != db_original_x) or (nuevo_y != db_original_y)
+          
+          if hubo_cambio_coord:
+            # Si ya tenía un geom_ant previo se respeta, de lo contrario se usa la posición que tenía antes (db_original)
+            # O si prefieres que siempre guarde la última posición anterior:
+            sql_update = """
+                          UPDATE "Usuarios"."levantamientos" 
+                          SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
+                              domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
+                              longitud = :longitud, "precisionGps" = :precisionGps, 
+                              "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
+                              activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                              "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                              "fechaModificacion" = :fechaModificacion, 
+                              geom_ant = COALESCE(geom_ant, ST_SetSRID(ST_MakePoint(:orig_x, :orig_y), 32613)),
+                              geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
+                          WHERE fid = :fid
+                      """
+          else:
+            sql_update = """
+                          UPDATE "Usuarios"."levantamientos" 
+                          SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
+                              domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
+                              longitud = :longitud, "precisionGps" = :precisionGps, 
+                              "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
+                              activo = :activo, "Predio_Viv" = :Predio_Viv, 
+                              "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                              "fechaModificacion" = :fechaModificacion, 
+                              geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
+                          WHERE fid = :fid
+                      """
 
-          sql_update = """
-                        UPDATE "Usuarios"."levantamientos" 
-                        SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
-                            domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
-                            longitud = :longitud, "precisionGps" = :precisionGps, 
-                            "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                            activo = :activo, "Predio_Viv" = :Predio_Viv, 
-                            "Latitud" = :Latitud, "Longitud" = :Longitud, 
-                            "fechaModificacion" = :fechaModificacion, 
-                            geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
-                        WHERE fid = :fid
-                    """
           ejecutar_sql(
               sql_update,
               {
@@ -908,8 +937,10 @@ if st.session_state.active_tab == "⚙️ Editar":
                   "Latitud": e_latitud,
                   "Longitud": e_longitud,
                   "fechaModificacion": fecha_mod_str,
-                  "coord_x": st.session_state[x_key],
-                  "coord_y": st.session_state[y_key],
+                  "coord_x": nuevo_x,
+                  "coord_y": nuevo_y,
+                  "orig_x": db_original_x,
+                  "orig_y": db_original_y,
               },
           )
 
