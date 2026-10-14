@@ -1,0 +1,12 @@
+[theme]
+base = "dark"
+primaryColor = "#00d4ff"
+backgroundColor = "#050a10"
+secondaryBackgroundColor = "#0d1b2a"
+textColor = "#FFFFFF"
+font = "sans serif"
+
+# Puedes añadir nuevas secciones aquí abajo en el mismo archivo
+[server]
+headless = true
+port = 8501
