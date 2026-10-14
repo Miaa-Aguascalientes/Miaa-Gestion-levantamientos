@@ -180,7 +180,6 @@ def obtener_datos_mysql(query, params=None):
   return pd.DataFrame(), "Error de conexión persistente a MySQL."
 
 def agregar_capas_base_mapa(m):
-  # Vista Satélite (Google) por defecto
   folium.TileLayer(
       tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
       name="Vista Satélite",
@@ -191,7 +190,6 @@ def agregar_capas_base_mapa(m):
       checked=True,
   ).add_to(m)
 
-  # Satélite (Esri) como alternativa
   folium.TileLayer(
       tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       name="Satélite (Esri)",
@@ -822,6 +820,24 @@ with st.sidebar:
         " margin-bottom: 10px;'>💾 Acciones de Registro</p>",
         unsafe_allow_html=True,
     )
+
+    # Botón para restablecer datos originales del registro en pantalla
+    if st.button("🔄 Restablecer Originales", key="btn_reset_sidebar", use_container_width=True):
+      e_fid = int(row_first["fid"])
+      x_key = f"coord_x_input_{e_fid}"
+      y_key = f"coord_y_input_{e_fid}"
+      ant_x_key = f"coord_ant_x_input_{e_fid}"
+      ant_y_key = f"coord_ant_y_input_{e_fid}"
+      ajust_key = f"ajust_{e_fid}"
+      map_key = f"map_edit_preview_{e_fid}"
+
+      for k in [x_key, y_key, ant_x_key, ant_y_key, ajust_key, map_key]:
+        if k in st.session_state:
+          del st.session_state[k]
+
+      st.success("¡Datos restablecidos a sus valores originales!")
+      t.sleep(0.8)
+      st.rerun()
 
     if st.button("💾 Actualizar Registro", key="btn_act_sidebar", use_container_width=True):
       try:
