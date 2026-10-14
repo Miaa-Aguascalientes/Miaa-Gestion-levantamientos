@@ -695,7 +695,6 @@ if st.session_state.active_tab == "⚙️ Editar":
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
-      # Guardamos el valor original actual de la BD para respaldarlo si cambia
       db_original_x = default_x
       db_original_y = default_y
 
@@ -882,15 +881,12 @@ if st.session_state.active_tab == "⚙️ Editar":
         try:
           fecha_mod_str = datetime.datetime.now(zona_mx).strftime("%Y-%m-%d %H:%M:%S")
           
-          # Verificamos si las coordenadas cambiaron para respaldarlas en geom_ant
           nuevo_x = st.session_state[x_key]
           nuevo_y = st.session_state[y_key]
           
           hubo_cambio_coord = (nuevo_x != db_original_x) or (nuevo_y != db_original_y)
           
           if hubo_cambio_coord:
-            # Si ya tenía un geom_ant previo se respeta, de lo contrario se usa la posición que tenía antes (db_original)
-            # O si prefieres que siempre guarde la última posición anterior:
             sql_update = """
                           UPDATE "Usuarios"."levantamientos" 
                           SET "medidorId" = :medidorId, serie = :serie, toma = :toma, 
