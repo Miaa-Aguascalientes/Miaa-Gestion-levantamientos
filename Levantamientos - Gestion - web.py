@@ -183,15 +183,30 @@ def obtener_datos_mysql(query, params=None):
   return pd.DataFrame(), "Error de conexión persistente a MySQL."
 
 def agregar_capas_base_mapa(m):
+  # Capa de Satélite con nombres de calles y etiquetas
   folium.TileLayer(
       tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      name="Vista Satélite",
+      name="Satélite con Calles",
       attr="Google",
       max_zoom=20,
       overlay=False,
       control=True,
       checked=True,
   ).add_to(m)
+
+  # Capa de OpenStreetMap estándar
+  folium.TileLayer(
+      tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      name="OpenStreetMap",
+      attr="OpenStreetMap",
+      max_zoom=19,
+      overlay=False,
+      control=True,
+      checked=False,
+  ).add_to(m)
+
+  # Botón de control para alternar capas en la esquina superior
+  folium.LayerControl().add_to(m)
 
 # 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
 st.write(
@@ -705,11 +720,10 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      # Se respeta exactamente la proporción original [1.1, 1.2] para que el ancho del mapa no se afecte
+      # Se respeta la proporción [1.1, 1.2] para que el mapa conserve su ancho original y los inputs se dividan en 3 columnas
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
 
       with col_inputs_left:
-        # Dividimos los inputs en 3 columnas internas
         ic1, ic2, ic3 = st.columns(3)
 
         with ic1:
@@ -1109,13 +1123,12 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
- # Mapa de Ubicación de Medidores (Optimizado para 60k+ puntos)
+  # Mapa de Ubicación de Medidores (Optimizado para 60k+ puntos con ScatterplotLayer y puntos de ajuste manual en naranja)
   st.markdown(
       "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
   )
 
-  # Consultamos los puntos necesarios ordenando los de ajuste manual al inicio
   df_map_3d, err_map_3d = obtener_datos("""
         SELECT fid, "medidorId", COALESCE("ajusteManual", FALSE) as "ajusteManual", 
                ST_X(geom) as lon, ST_Y(geom) as lat 
@@ -1131,15 +1144,15 @@ if st.session_state.active_tab == "📊 Dashboard General":
       if pd.notna(r["lon"]) and pd.notna(r["lat"]):
         lon_wgs, lat_wgs = transformer_to_latlon.transform(r["lon"], r["lat"])
         
-        # Validar de forma segura si el campo es True
         es_ajuste = str(r.get("ajusteManual")).strip().lower() in ["true", "1", "t"]
         
-        # Naranja neón [255, 140, 0] para Ajuste Manual, Cian [0, 229, 255] para normales
-        color_punto = [255, 140, 0, 220] if es_ajuste else [0, 229, 255, 140]
+        color_punto = [255, 120, 0, 255] if es_ajuste else [0, 229, 255, 140]
+        radio_punto = 25 if es_ajuste else 10
         
         puntos_3d.append({
             "position": [lon_wgs, lat_wgs],
             "color": color_punto,
+            "radius": radio_punto,
             "medidorId": r["medidorId"],
             "ajuste": "Sí" if es_ajuste else "No",
         })
@@ -1148,19 +1161,18 @@ if st.session_state.active_tab == "📊 Dashboard General":
         latitude=21.8853, longitude=-102.2916, zoom=13, pitch=30, bearing=0
     )
 
-    # Reemplazamos ColumnLayer por ScatterplotLayer para alto rendimiento con miles de puntos
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=puntos_3d,
         get_position="position",
-        get_radius=12,  # Radio del punto en metros
+        get_radius="radius",
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
         stroked=True,
         filled=True,
         radius_min_pixels=2,
-        radius_max_pixels=10,
+        radius_max_pixels=12,
     )
 
     r_deck = pdk.Deck(
