@@ -557,9 +557,6 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
-  # Variable global temporal para el row_first si estamos en Editar
-  # (Se evalúa abajo al cargar la pestaña Editar)
-
   df_sidebar_levantamientos, _ = obtener_datos(
       'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
   )
@@ -662,8 +659,12 @@ if st.session_state.active_tab == "⚙️ Editar":
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
-      default_ant_x = float(row["coord_ant_x"]) if pd.notna(row["coord_ant_x"]) else 0.0
-      default_ant_y = float(row["coord_ant_y"]) if pd.notna(row["coord_ant_y"]) else 0.0
+      default_ant_x = (
+          float(row["coord_ant_x"]) if pd.notna(row["coord_ant_x"]) else 0.0
+      )
+      default_ant_y = (
+          float(row["coord_ant_y"]) if pd.notna(row["coord_ant_y"]) else 0.0
+      )
 
       x_key = f"coord_x_input_{row['fid']}"
       y_key = f"coord_y_input_{row['fid']}"
@@ -683,24 +684,32 @@ if st.session_state.active_tab == "⚙️ Editar":
         st.session_state[ajust_key] = bool(row["ajusteManual"])
 
       map_key = f"map_edit_preview_{row['fid']}"
-      if map_key in st.session_state and st.session_state[map_key] and st.session_state[map_key].get("last_clicked"):
+      if (
+          map_key in st.session_state
+          and st.session_state[map_key]
+          and st.session_state[map_key].get("last_clicked")
+      ):
         clicked_data = st.session_state[map_key]["last_clicked"]
         lat_c = clicked_data["lat"]
         lon_c = clicked_data["lng"]
         utm_x, utm_y = transformer_to_utm.transform(lon_c, lat_c)
         new_x = round(utm_x, 2)
         new_y = round(utm_y, 3)
-        if st.session_state[x_key] != new_x or st.session_state[y_key] != new_y:
+        if (
+            st.session_state[x_key] != new_x
+            or st.session_state[y_key] != new_y
+        ):
           st.session_state[ant_x_key] = st.session_state[x_key]
           st.session_state[ant_y_key] = st.session_state[y_key]
           st.session_state[x_key] = new_x
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
+      col_inputs_left, col_map_right = st.columns([1.8, 1.2], gap="large")
 
       with col_inputs_left:
-        ic1, ic2 = st.columns(2)
+        ic1, ic2, ic3 = st.columns(3)
+
         with ic1:
           st.text_input(
               "FID",
@@ -709,28 +718,14 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=f"fid_bloq_{row['fid']}",
           )
           st.text_input(
-              "Serie",
-              value=str(row["serie"] or ""),
-              key=f"ser_{row['fid']}",
-          )
-          st.text_input(
-              "Domicilio", value=str(row["domicilio"] or ""), key=f"dom_{row['fid']}"
-          )
-          st.number_input(
-              "Latitud",
-              format="%.6f",
-              value=float(row["latitud"] or 21.8853),
-              key=f"lat_{row['fid']}",
+              "Domicilio",
+              value=str(row["domicilio"] or ""),
+              key=f"dom_{row['fid']}",
           )
           st.number_input(
               "Precisión GPS",
               value=float(row["precisionGps"] or 0.0),
               key=f"prec_{row['fid']}",
-          )
-          st.checkbox(
-              "Activo",
-              value=bool(row["activo"]),
-              key=f"act_{row['fid']}",
           )
           st.number_input(
               "Coordenada X",
@@ -745,12 +740,9 @@ if st.session_state.active_tab == "⚙️ Editar":
 
         with ic2:
           st.text_input(
-              "Medidor ID", value=str(row["medidorId"] or ""), key=f"medid_{row['fid']}"
-          )
-          st.number_input(
-              "Toma",
-              value=int(row["toma"] or 0),
-              key=f"tom_{row['fid']}",
+              "Medidor ID",
+              value=str(row["medidorId"] or ""),
+              key=f"medid_{row['fid']}",
           )
           st.text_input(
               "Colonia",
@@ -758,19 +750,10 @@ if st.session_state.active_tab == "⚙️ Editar":
               key=f"col_{row['fid']}",
           )
           st.number_input(
-              "Longitud",
+              "Latitud",
               format="%.6f",
-              value=float(row["longitud"] or -102.2916),
-              key=f"lon_{row['fid']}",
-          )
-          st.checkbox(
-              "Ajuste Manual",
-              key=ajust_key,
-          )
-          st.text_input(
-              "Predio_Viv",
-              value=str(row["Predio_Viv"] or ""),
-              key=f"pviv_{row['fid']}",
+              value=float(row["latitud"] or 21.8853),
+              key=f"lat_{row['fid']}",
           )
           st.number_input(
               "Coordenada Y",
@@ -781,6 +764,41 @@ if st.session_state.active_tab == "⚙️ Editar":
               "Coordenada Y Anterior",
               format="%.3f",
               key=ant_y_key,
+          )
+
+        with ic3:
+          st.text_input(
+              "Serie",
+              value=str(row["serie"] or ""),
+              key=f"ser_{row['fid']}",
+          )
+          st.number_input(
+              "Toma",
+              value=int(row["toma"] or 0),
+              key=f"tom_{row['fid']}",
+          )
+          st.number_input(
+              "Longitud",
+              format="%.6f",
+              value=float(row["longitud"] or -102.2916),
+              key=f"lon_{row['fid']}",
+          )
+          st.text_input(
+              "Predio_Viv",
+              value=str(row["Predio_Viv"] or ""),
+              key=f"pviv_{row['fid']}",
+          )
+          st.markdown(
+              "<div style='height: 2px;'></div>", unsafe_allow_html=True
+          )
+          st.checkbox(
+              "Activo",
+              value=bool(row["activo"]),
+              key=f"act_{row['fid']}",
+          )
+          st.checkbox(
+              "Ajuste Manual",
+              key=ajust_key,
           )
 
         st.text_area(
@@ -998,7 +1016,6 @@ if st.session_state.active_tab == "📊 Dashboard General":
       else 0
   )
 
-  # Tarjetas superiores compactas
   c_m1, c_m2 = st.columns(2)
   with c_m1:
     st.markdown(
@@ -1030,7 +1047,6 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
-  # Gráfica superior con selector de tipo de vista (Diaria / Mensual)
   col_titulo_g, col_botones_g = st.columns([3, 1])
   with col_titulo_g:
     st.markdown(
@@ -1091,7 +1107,6 @@ if st.session_state.active_tab == "📊 Dashboard General":
 
   st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-  # Mapa 3D de Ubicación de Medidores
   st.markdown(
       "<h4 style='color: #00E5FF; font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;'>Mapa de Ubicación de Medidores</h4>",
       unsafe_allow_html=True,
