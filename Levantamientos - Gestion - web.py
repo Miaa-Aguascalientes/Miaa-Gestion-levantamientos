@@ -29,7 +29,6 @@ if "gestor_bd_autenticado" not in st.session_state:
   st.session_state.gestor_bd_autenticado = False
 
 zona_mx = ZoneInfo("America/Mexico_City")
-API_KEY_CARTO = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
 
 # Transformadores de coordenadas (UTM Zona 13N <-> Lat/Lon WGS84)
 transformer_to_latlon = Transformer.from_crs(
@@ -181,6 +180,7 @@ def obtener_datos_mysql(query, params=None):
   return pd.DataFrame(), "Error de conexión persistente a MySQL."
 
 def agregar_capas_base_mapa(m):
+  # Vista Satélite (Google) por defecto
   folium.TileLayer(
       tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
       name="Vista Satélite",
@@ -188,8 +188,10 @@ def agregar_capas_base_mapa(m):
       max_zoom=20,
       overlay=False,
       control=True,
+      checked=True,
   ).add_to(m)
 
+  # Satélite (Esri) como alternativa
   folium.TileLayer(
       tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       name="Satélite (Esri)",
@@ -197,20 +199,7 @@ def agregar_capas_base_mapa(m):
       max_zoom=20,
       overlay=False,
       control=True,
-  ).add_to(m)
-
-  folium.TileLayer(
-      tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={API_KEY_CARTO}",
-      name="Vista Nocturna",
-      attr=(
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          ' contributors &copy; <a'
-          ' href="https://carto.com/attributions">CARTO</a>'
-      ),
-      subdomains="abcd",
-      max_zoom=20,
-      overlay=False,
-      control=True,
+      checked=False,
   ).add_to(m)
 
 # 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
@@ -624,7 +613,6 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[ant_y_key] = st.session_state[y_key]
           st.session_state[x_key] = new_x
           st.session_state[y_key] = new_y
-          # Activar Ajuste Manual por defecto al hacer clic en el mapa
           st.session_state[ajust_key] = True
 
       col_inputs_left, col_map_right = st.columns([1.1, 1.2], gap="large")
