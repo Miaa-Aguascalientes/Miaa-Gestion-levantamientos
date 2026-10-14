@@ -492,9 +492,9 @@ if not st.session_state.autenticado:
       if submit_login:
         if usuario_input and password_input:
           query_login = """
-                        SELECT id, usuario, tipo_usuario, departamento 
-                        FROM usuarios_miaa 
-                        WHERE usuario = :usu AND password = :pas
+                        SELECT id, usuario, password, tipo_usuario, departamento 
+                        FROM usuarios_levantamientos 
+                        WHERE TRIM(usuario) = :usu AND TRIM(password) = :pas
                     """
           df_user, err_login = obtener_datos_mysql(
               query_login,
