@@ -694,11 +694,11 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.session_state[y_key] = new_y
           st.session_state[ajust_key] = True
 
-      col_inputs_left, col_map_right = st.columns([1.2, 1], gap="medium")
+      col_inputs_left, col_map_right = st.columns([1.35, 1], gap="medium")
 
       with col_inputs_left:
-        # Formulario limpio organizado en 3 columnas equilibradas
-        c1, c2, c3 = st.columns(3)
+        # Formulario completo organizado en 4 columnas limpias
+        c1, c2, c3, c4 = st.columns([1, 1, 1, 0.8])
         
         with c1:
           st.text_input("FID", value=str(row["fid"] or 0), disabled=True, key=f"fid_bloq_{row['fid']}")
@@ -720,6 +720,15 @@ if st.session_state.active_tab == "⚙️ Editar":
           st.text_input("Predio_Viv", value=str(row["Predio_Viv"] or ""), key=f"pviv_{row['fid']}")
           st.number_input("Precisión GPS", value=float(row["precisionGps"] or 0.0), key=f"prec_{row['fid']}")
           
+          # Campos de fechas y usuario agregados
+          f_reg_formatted = formatear_fecha_str(row["fechaRegistro"])
+          f_mod_formatted = formatear_fecha_str(row["fechaModificacion"])
+          
+          st.text_input("Fecha Registro", value=f_reg_formatted, disabled=True, key=f"freg_{row['fid']}")
+          st.text_input("Fecha Modificación", value=f_mod_formatted, disabled=True, key=f"fmod_{row['fid']}")
+          st.text_input("Usuario Nombre", value=str(row["usuarioNombre"] or ""), key=f"usunom_{row['fid']}")
+
+        with c4:
           st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
           st.checkbox("Activo", value=bool(row["activo"]), key=f"act_{row['fid']}")
           st.checkbox("Ajuste Manual", key=ajust_key)
@@ -765,7 +774,7 @@ if st.session_state.active_tab == "⚙️ Editar":
           st_folium(
               m_ed,
               width="100%",
-              height=500,
+              height=520,
               key=map_key,
               returned_objects=["last_clicked"],
           )
@@ -835,8 +844,8 @@ if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_f
                           domicilio = :domicilio, colonia = :colonia, latitud = :latitud, 
                           longitud = :longitud, "precisionGps" = :precisionGps, 
                           "ajusteManual" = :ajusteManual, observaciones = :observaciones, 
-                          activo = :activo, "Predio_Viv" = :Predio_Viv, 
-                          "Latitud" = :Latitud, "Longitud" = :Longitud, 
+                          "usuarioNombre" = :usuarioNombre, activo = :activo, 
+                          "Predio_Viv" = :Predio_Viv, "Latitud" = :Latitud, "Longitud" = :Longitud, 
                           "fechaModificacion" = :fechaModificacion, 
                           {geom_ant_sql}
                           geom = ST_SetSRID(ST_MakePoint(:coord_x, :coord_y), 32613)
@@ -857,6 +866,7 @@ if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_f
             "precisionGps": float(st.session_state.get(f"prec_{e_fid}", float(row_first["precisionGps"] or 0.0))),
             "ajusteManual": bool(st.session_state.get(ajust_key, bool(row_first["ajusteManual"]))),
             "observaciones": st.session_state.get(f"obs_{e_fid}", str(row_first["observaciones"] or "")) or None,
+            "usuarioNombre": st.session_state.get(f"usunom_{e_fid}", str(row_first["usuarioNombre"] or "")) or None,
             "activo": bool(st.session_state.get(f"act_{e_fid}", bool(row_first["activo"]))),
             "Predio_Viv": st.session_state.get(f"pviv_{e_fid}", str(row_first["Predio_Viv"] or "")) or None,
             "Latitud": float(st.session_state.get(f"lat_{e_fid}", float(row_first["latitud"] or 21.8853))),
