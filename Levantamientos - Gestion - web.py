@@ -494,11 +494,11 @@ if not st.session_state.autenticado:
           query_login = """
                         SELECT id, usuario, password, tipo_usuario, departamento 
                         FROM usuarios_levantamientos 
-                        WHERE TRIM(usuario) = :usu AND TRIM(password) = :pas
+                        WHERE TRIM(usuario) = :usu AND TRIM(CAST(password AS CHAR)) = :pas
                     """
           df_user, err_login = obtener_datos_mysql(
               query_login,
-              {"usu": usuario_input.strip(), "pas": password_input.strip()},
+              {"usu": usuario_input.strip(), "pas": str(password_input).strip()},
           )
 
           if not err_login and not df_user.empty:
@@ -695,6 +695,9 @@ if st.session_state.active_tab == "⚙️ Editar":
       default_x = float(row["coord_x"]) if pd.notna(row["coord_x"]) else 0.0
       default_y = float(row["coord_y"]) if pd.notna(row["coord_y"]) else 0.0
 
+      default_ant_x = float(row["coord_ant_x"]) if pd.notna(row["coord_ant_x"]) else 0.0
+      default_ant_y = float(row["coord_ant_y"]) if pd.notna(row["coord_ant_y"]) else 0.0
+
       db_original_x = default_x
       db_original_y = default_y
 
@@ -862,6 +865,25 @@ if st.session_state.active_tab == "⚙️ Editar":
               "Coordenada Y",
               format="%.3f",
               key=y_key,
+          )
+
+        # Campos para mostrar las coordenadas anteriores (geom_ant) debajo de X y Y
+        c_ant1, c_ant2 = st.columns(2)
+        with c_ant1:
+          st.number_input(
+              "Coordenada X Anterior",
+              format="%.2f",
+              value=default_ant_x,
+              disabled=True,
+              key=f"coord_ant_x_{row['fid']}",
+          )
+        with c_ant2:
+          st.number_input(
+              "Coordenada Y Anterior",
+              format="%.3f",
+              value=default_ant_y,
+              disabled=True,
+              key=f"coord_ant_y_{row['fid']}",
           )
 
       e_observaciones = st.text_area(
