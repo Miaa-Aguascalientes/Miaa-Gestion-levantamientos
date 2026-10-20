@@ -427,6 +427,7 @@ st.write(
 </style>""",
     unsafe_allow_html=True,
 )
+
 # 05 SECCION ------------------------------------------------------------------- SISTEMA DE LOGIN CONECTADO A MYSQL -----------------------------------------------------------------------------------------------
 if not st.session_state.autenticado:
   _, col_centro, _ = st.columns([1, 1.4, 1])
@@ -508,7 +509,7 @@ COLUMNAS_LEV = """
     ST_X(geom_ant) as coord_ant_x, ST_Y(geom_ant) as coord_ant_y
 """
 
-# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
+# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR - OPCIÓN 4) --------------------------------------------------------------------------------------------------------
 with st.sidebar:
 
   st.markdown(
@@ -520,11 +521,17 @@ with st.sidebar:
       unsafe_allow_html=True,
   )
 
+  # Tarjeta de usuario corporativa limpia (Opción 4)
   st.markdown(
       f"""
-        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
-            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
-            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
+        <div class="user-card">
+            <div style="background: rgba(0, 229, 255, 0.1); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; border: 1px solid rgba(0, 229, 255, 0.3);">
+                👤
+            </div>
+            <div style="overflow: hidden;">
+                <div style="color: #00E5FF; font-weight: 700; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.usuario_actual}">{st.session_state.usuario_actual}</div>
+                <div style="color: #94A3B8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
+            </div>
         </div>
     """,
       unsafe_allow_html=True,
@@ -567,22 +574,21 @@ with st.sidebar:
         "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
-        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
-        unsafe_allow_html=True,
-    )
-
+    
     total_predios = len(df_sidebar_levantamientos)
     activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
     inactivos_count = total_predios - activos_count
 
+    # Tarjeta de Resumen Predios y Cerrar Sesión integrados en bloque limpio
     st.markdown(
         f"""
-        <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
-            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
-            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
-            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; margin-top: 0px;'>📊 Resumen Predios</p>
+            <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
+                <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
+                <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
+                <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -590,7 +596,7 @@ with st.sidebar:
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
+  if st.button("🚪 Cerrar Sesión", key="btn_logout", use_container_width=True):
     st.session_state.autenticado = False
     st.session_state.gestor_bd_autenticado = False
     st.rerun()
