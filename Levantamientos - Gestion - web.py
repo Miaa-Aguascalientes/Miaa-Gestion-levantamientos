@@ -260,7 +260,6 @@ st.write(
         display: none !important;
     }
 
-    /* Animación fluida para las opciones del menú */
     div.row-widget.stRadio div[role="radiogroup"] > label {
         background: linear-gradient(145deg, #0D1424 0%, #111A30 100%) !important;
         border: 1px solid rgba(0, 229, 255, 0.2) !important;
@@ -281,7 +280,6 @@ st.write(
         transition: color 0.3s ease;
     }
 
-    /* Efecto hover con desplazamiento y brillo dinámico */
     div.row-widget.stRadio div[role="radiogroup"] > label:hover {
         background: linear-gradient(145deg, #152035 0%, #1E293B 100%) !important;
         border-color: #00E5FF !important;
@@ -293,7 +291,6 @@ st.write(
         color: #00E5FF !important;
     }
 
-    /* Estado seleccionado activo con pulso de luz */
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] {
         background: linear-gradient(90deg, #0A2540 0%, #0D1424 100%) !important;
         border-left: 5px solid #00E5FF !important;
@@ -309,7 +306,6 @@ st.write(
         text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
     }
 
-    /* Tarjeta de usuario con pulso animado en el avatar */
     @keyframes avatarPulse {
         0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
         70% { box-shadow: 0 0 0 8px rgba(0, 229, 255, 0); }
@@ -353,7 +349,6 @@ st.write(
         font-size: 0.85rem !important;
     }
 
-    /* Botones generales de sidebar con animación de elevación y neón */
     .stButton>button {
         background: #1E293B !important;
         color: #F8FAFC !important;
@@ -370,21 +365,6 @@ st.write(
         color: #00E5FF !important;
         box-shadow: 0 0 15px rgba(0, 229, 255, 0.5) !important;
         transform: translateY(-2px) scale(1.02) !important;
-    }
-
-    /* Tarjeta de Resumen con efecto de luz interna */
-    .sidebar-kpi-card {
-        background: linear-gradient(145deg, #0D1424 0%, #0A0F1D 100%);
-        border: 1px solid rgba(0, 229, 255, 0.25);
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 12px;
-        box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.05);
-        transition: all 0.3s ease;
-    }
-    .sidebar-kpi-card:hover {
-        border-color: rgba(0, 229, 255, 0.5);
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.15), inset 0 0 10px rgba(0, 229, 255, 0.1);
     }
 
     @keyframes fadeInSlide {
@@ -527,7 +507,7 @@ with st.sidebar:
       unsafe_allow_html=True,
   )
 
-  opciones_menu = ["📊 Dashboard General", "⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
+  opciones_menu = ["📊 Dashboard General", "⚙️ Editar Registros", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
 
   if (
       "active_tab" not in st.session_state
@@ -556,35 +536,6 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
-  df_sidebar_levantamientos, _ = obtener_datos(
-      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
-  )
-
-  if not df_sidebar_levantamientos.empty:
-    st.markdown(
-        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
-        unsafe_allow_html=True,
-    )
-    
-    total_predios = len(df_sidebar_levantamientos)
-    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
-    inactivos_count = total_predios - activos_count
-
-    # Tarjeta KPI con estilo dinámico y bordes de luz
-    st.markdown(
-        f"""
-        <div class="sidebar-kpi-card">
-            <p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; margin-top: 0px;'>📊 Resumen Predios</p>
-            <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
-                <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
-                <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
-                <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
   st.markdown("<br>", unsafe_allow_html=True)
 
   if st.button("🚪 Cerrar Sesión", key="btn_logout", use_container_width=True):
@@ -598,7 +549,7 @@ with st.sidebar:
 df_lev = pd.DataFrame()
 row_first = None
 
-if st.session_state.active_tab == "⚙️ Editar":
+if st.session_state.active_tab == "⚙️ Editar Registros":
   busqueda_edit = st.session_state.get("busqueda_edit_val", "")
 
   if busqueda_edit and busqueda_edit.strip() != "":
@@ -859,8 +810,8 @@ if st.session_state.active_tab == "⚙️ Editar":
   else:
     st.info("No se encontró ningún registro para editar.")
 
-# Renderizar botones de acción en la barra lateral si estamos en la pestaña Editar
-if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_first is not None:
+# Renderizar botones de acción en la barra lateral si estamos en la pestaña Editar Registros
+if st.session_state.active_tab == "⚙️ Editar Registros" and not df_lev.empty and row_first is not None:
   with st.sidebar:
     st.markdown(
         "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
