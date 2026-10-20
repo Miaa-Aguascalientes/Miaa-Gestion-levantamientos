@@ -193,7 +193,7 @@ def agregar_capas_base_mapa(m):
       checked=True,
   ).add_to(m)
 
-# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
+# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y ESTILO CORPORATIVO --------------------------------------------------------------------------------
 st.write(
     """<style>
     #MainMenu, [data-testid="stHeader"] {visibility: hidden !important; display: none !important;} 
@@ -299,12 +299,14 @@ st.write(
 
     .user-card {
         background: #0D1424;
-        border: 1px solid rgba(0, 229, 255, 0.15);
-        border-left: 4px solid #00E5FF;
-        border-radius: 6px;
-        padding: 12px 16px;
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        border-radius: 8px;
+        padding: 12px 14px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
     .stTextInput label, .stSelectbox label, .stNumberInput label, .stDateInput label, [data-testid="stWidgetLabel"] p {
@@ -425,7 +427,6 @@ st.write(
 </style>""",
     unsafe_allow_html=True,
 )
-
 # 05 SECCION ------------------------------------------------------------------- SISTEMA DE LOGIN CONECTADO A MYSQL -----------------------------------------------------------------------------------------------
 if not st.session_state.autenticado:
   _, col_centro, _ = st.columns([1, 1.4, 1])
