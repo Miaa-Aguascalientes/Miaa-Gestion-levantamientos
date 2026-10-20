@@ -193,7 +193,7 @@ def agregar_capas_base_mapa(m):
       checked=True,
   ).add_to(m)
 
-# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y ESTILO CORPORATIVO --------------------------------------------------------------------------------
+# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON ANIMACIONES VIVACES EN SIDEBAR Y BOTONES --------------------------------------------------------------------------------
 st.write(
     """<style>
     #MainMenu, [data-testid="stHeader"] {visibility: hidden !important; display: none !important;} 
@@ -229,7 +229,7 @@ st.write(
 
     [data-testid="stSidebar"] {
         background-color: #0A0F1D !important;
-        border-right: 1px solid rgba(0, 229, 255, 0.15) !important;
+        border-right: 1px solid rgba(0, 229, 255, 0.2) !important;
         padding-top: 0rem !important;
         min-width: 280px !important;
         max-width: 320px !important;
@@ -252,7 +252,7 @@ st.write(
     div.row-widget.stRadio > div {
         display: flex;
         flex-direction: column;
-        gap: 8px !important;
+        gap: 10px !important;
     }
 
     div.row-widget.stRadio input[type="radio"],
@@ -260,15 +260,17 @@ st.write(
         display: none !important;
     }
 
+    /* Animación fluida para las opciones del menú */
     div.row-widget.stRadio div[role="radiogroup"] > label {
-        background: #0D1424 !important;
-        border: 1px solid rgba(0, 229, 255, 0.15) !important;
-        border-radius: 8px !important;
-        padding: 10px 14px !important;
+        background: linear-gradient(145deg, #0D1424 0%, #111A30 100%) !important;
+        border: 1px solid rgba(0, 229, 255, 0.2) !important;
+        border-radius: 10px !important;
+        padding: 12px 16px !important;
         margin: 0 !important;
         cursor: pointer !important;
-        transition: all 0.2s ease-in-out !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100% !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
     div.row-widget.stRadio div[role="radiogroup"] label p,
@@ -276,37 +278,73 @@ st.write(
         color: #94A3B8 !important;
         font-weight: 600 !important;
         font-size: 0.9rem !important;
+        transition: color 0.3s ease;
     }
 
+    /* Efecto hover con desplazamiento y brillo dinámico */
     div.row-widget.stRadio div[role="radiogroup"] > label:hover {
-        background: #152035 !important;
-        border-color: rgba(0, 229, 255, 0.4) !important;
-        transform: translateX(4px) !important;
+        background: linear-gradient(145deg, #152035 0%, #1E293B 100%) !important;
+        border-color: #00E5FF !important;
+        transform: translateX(6px) scale(1.01) !important;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3) !important;
     }
 
+    div.row-widget.stRadio div[role="radiogroup"] > label:hover p {
+        color: #00E5FF !important;
+    }
+
+    /* Estado seleccionado activo con pulso de luz */
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] {
         background: linear-gradient(90deg, #0A2540 0%, #0D1424 100%) !important;
-        border-left: 4px solid #00E5FF !important;
-        border-color: rgba(0, 229, 255, 0.5) !important;
-        box-shadow: 0 2px 10px rgba(0, 229, 255, 0.15) !important;
+        border-left: 5px solid #00E5FF !important;
+        border-color: rgba(0, 229, 255, 0.7) !important;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.4) !important;
+        transform: translateX(4px);
     }
 
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] p,
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] span {
         color: #00E5FF !important;
         font-weight: 700 !important;
+        text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+    }
+
+    /* Tarjeta de usuario con pulso animado en el avatar */
+    @keyframes avatarPulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
+        70% { box-shadow: 0 0 0 8px rgba(0, 229, 255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
     }
 
     .user-card {
-        background: #0D1424;
-        border: 1px solid rgba(0, 229, 255, 0.2);
-        border-radius: 8px;
+        background: linear-gradient(135deg, #0D1424 0%, #152035 100%);
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        border-radius: 10px;
         padding: 12px 14px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         margin-bottom: 12px;
         display: flex;
         align-items: center;
         gap: 12px;
+        transition: all 0.3s ease;
+    }
+    .user-card:hover {
+        border-color: #00E5FF;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+    }
+
+    .user-avatar {
+        background: rgba(0, 229, 255, 0.15);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        border: 1px solid #00E5FF;
+        animation: avatarPulse 2.5s infinite;
     }
 
     .stTextInput label, .stSelectbox label, .stNumberInput label, .stDateInput label, [data-testid="stWidgetLabel"] p {
@@ -315,83 +353,38 @@ st.write(
         font-size: 0.85rem !important;
     }
 
+    /* Botones generales de sidebar con animación de elevación y neón */
     .stButton>button {
         background: #1E293B !important;
         color: #F8FAFC !important;
-        border: 1px solid rgba(0, 229, 255, 0.25) !important;
+        border: 1px solid rgba(0, 229, 255, 0.3) !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         padding: 0.55rem 1.2rem !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     .stButton>button:hover {
         background: #334155 !important;
         border-color: #00E5FF !important;
         color: #00E5FF !important;
-        box-shadow: 0 0 12px rgba(0, 229, 255, 0.3) !important;
-        transform: translateY(-1px) !important;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.5) !important;
+        transform: translateY(-2px) scale(1.02) !important;
     }
 
-    .stButton>button:has(p:contains("Actualizar")), 
-    .stButton>button:has(span:contains("Actualizar")),
-    .stButton>button:has(p:contains("Guardar")), 
-    .stButton>button:has(span:contains("Guardar")),
-    div[data-testid="stFormSubmitButton"]>button {
-        background: linear-gradient(135deg, #0284C7 0%, #00B4D8 100%) !important;
-        color: #FFFFFF !important;
-        border: 1px solid #00E5FF !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 15px rgba(0, 180, 216, 0.35) !important;
+    /* Tarjeta de Resumen con efecto de luz interna */
+    .sidebar-kpi-card {
+        background: linear-gradient(145deg, #0D1424 0%, #0A0F1D 100%);
+        border: 1px solid rgba(0, 229, 255, 0.25);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.05);
+        transition: all 0.3s ease;
     }
-    .stButton>button:has(p:contains("Actualizar")):hover,
-    .stButton>button:has(span:contains("Actualizar")):hover,
-    .stButton>button:has(p:contains("Guardar")):hover,
-    .stButton>button:has(span:contains("Guardar")):hover {
-        background: linear-gradient(135deg, #0369A1 0%, #0096C7 100%) !important;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.6) !important;
-        color: #FFFFFF !important;
-    }
-
-    .stButton>button:has(p:contains("Eliminar")), 
-    .stButton>button:has(span:contains("Eliminar")) {
-        background: rgba(153, 27, 27, 0.25) !important;
-        color: #FCA5A5 !important;
-        border: 1px solid rgba(239, 68, 68, 0.5) !important;
-    }
-    .stButton>button:has(p:contains("Eliminar")):hover,
-    .stButton>button:has(span:contains("Eliminar")):hover {
-        background: #991B1B !important;
-        color: #FFFFFF !important;
-        border-color: #EF4444 !important;
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
-    }
-    div[data-baseweb="input"] input, div[data-baseweb="base-input"] input, div[data-baseweb="textarea"] textarea {
-        background-color: #080C14 !important;
-        color: #F8FAFC !important;
-        border-color: rgba(0, 229, 255, 0.25) !important;
-        border-radius: 6px !important;
-        font-size: 0.9rem !important;
-    } 
-    
-    [data-testid="stExpander"] {
-        background-color: #080C14 !important;
-        border: 1px solid rgba(0, 229, 255, 0.15) !important;
-        border-radius: 6px !important;
-        margin-top: 3px !important;
-        margin-bottom: 3px !important;
-    }
-
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0.2rem !important;
-    }
-
-    [data-testid="stExpander"] summary {
-        color: #00E5FF !important;
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
-        padding-top: 6px !important;
-        padding-bottom: 6px !important;
+    .sidebar-kpi-card:hover {
+        border-color: rgba(0, 229, 255, 0.5);
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.15), inset 0 0 10px rgba(0, 229, 255, 0.1);
     }
 
     @keyframes fadeInSlide {
@@ -411,7 +404,6 @@ st.write(
     }
 
     .login-container-animated {
-        animation: fadeInSlide 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         background: linear-gradient(145deg, #0D1424 0%, #0A0F1D 100%);
         border: 1px solid rgba(0, 229, 255, 0.25);
         border-radius: 14px;
@@ -509,25 +501,23 @@ COLUMNAS_LEV = """
     ST_X(geom_ant) as coord_ant_x, ST_Y(geom_ant) as coord_ant_y
 """
 
-# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR - OPCIÓN 4) --------------------------------------------------------------------------------------------------------
+# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR DINÁMICA) --------------------------------------------------------------------------------------------------------
 with st.sidebar:
 
   st.markdown(
       """
-        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
-            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
+        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); margin-bottom: 12px;">
+            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" class="login-logo-animated" style="width: 140px; margin-bottom: 0px;" />
         </div>
     """,
       unsafe_allow_html=True,
   )
 
-  # Tarjeta de usuario corporativa limpia (Opción 4)
+  # Tarjeta de usuario con avatar en pulso neón animado
   st.markdown(
       f"""
         <div class="user-card">
-            <div style="background: rgba(0, 229, 255, 0.1); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; border: 1px solid rgba(0, 229, 255, 0.3);">
-                👤
-            </div>
+            <div class="user-avatar">👤</div>
             <div style="overflow: hidden;">
                 <div style="color: #00E5FF; font-weight: 700; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.usuario_actual}">{st.session_state.usuario_actual}</div>
                 <div style="color: #94A3B8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
@@ -547,10 +537,11 @@ with st.sidebar:
 
   st.markdown(
       "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
-      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
+      " text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;'>Navegación</p>",
       unsafe_allow_html=True,
   )
 
+  # Menú interactivo dinámico con efectos de desplazamiento
   for opcion in opciones_menu:
     es_activa = st.session_state.active_tab == opcion
     tipo_btn = "primary" if es_activa else "secondary"
@@ -579,10 +570,10 @@ with st.sidebar:
     activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
     inactivos_count = total_predios - activos_count
 
-    # Tarjeta de Resumen Predios y Cerrar Sesión integrados en bloque limpio
+    # Tarjeta KPI con estilo dinámico y bordes de luz
     st.markdown(
         f"""
-        <div style="background: #0D1424; border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+        <div class="sidebar-kpi-card">
             <p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; margin-top: 0px;'>📊 Resumen Predios</p>
             <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
                 <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
