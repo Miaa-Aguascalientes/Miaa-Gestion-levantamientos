@@ -1,4 +1,3 @@
-# Levantamientos - Gestión de Predios (MIAA)
 import base64
 import datetime
 import time as t
@@ -193,7 +192,7 @@ def agregar_capas_base_mapa(m):
       checked=True,
   ).add_to(m)
 
-# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON ANIMACIONES VIVACES EN SIDEBAR Y BOTONES --------------------------------------------------------------------------------
+# 04 SECCION ------------------------------------------------------------- ESTILOS CSS CON BARRA LATERAL FIJA Y LOGOTIPO MÁS ARRIBA --------------------------------------------------------------------------------
 st.write(
     """<style>
     #MainMenu, [data-testid="stHeader"] {visibility: hidden !important; display: none !important;} 
@@ -229,7 +228,7 @@ st.write(
 
     [data-testid="stSidebar"] {
         background-color: #0A0F1D !important;
-        border-right: 1px solid rgba(0, 229, 255, 0.2) !important;
+        border-right: 1px solid rgba(0, 229, 255, 0.15) !important;
         padding-top: 0rem !important;
         min-width: 280px !important;
         max-width: 320px !important;
@@ -252,7 +251,7 @@ st.write(
     div.row-widget.stRadio > div {
         display: flex;
         flex-direction: column;
-        gap: 10px !important;
+        gap: 8px !important;
     }
 
     div.row-widget.stRadio input[type="radio"],
@@ -261,15 +260,14 @@ st.write(
     }
 
     div.row-widget.stRadio div[role="radiogroup"] > label {
-        background: linear-gradient(145deg, #0D1424 0%, #111A30 100%) !important;
-        border: 1px solid rgba(0, 229, 255, 0.2) !important;
-        border-radius: 10px !important;
-        padding: 12px 16px !important;
+        background: #0D1424 !important;
+        border: 1px solid rgba(0, 229, 255, 0.15) !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
         margin: 0 !important;
         cursor: pointer !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.2s ease-in-out !important;
         width: 100% !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
     div.row-widget.stRadio div[role="radiogroup"] label p,
@@ -277,70 +275,35 @@ st.write(
         color: #94A3B8 !important;
         font-weight: 600 !important;
         font-size: 0.9rem !important;
-        transition: color 0.3s ease;
     }
 
     div.row-widget.stRadio div[role="radiogroup"] > label:hover {
-        background: linear-gradient(145deg, #152035 0%, #1E293B 100%) !important;
-        border-color: #00E5FF !important;
-        transform: translateX(6px) scale(1.01) !important;
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3) !important;
-    }
-
-    div.row-widget.stRadio div[role="radiogroup"] > label:hover p {
-        color: #00E5FF !important;
+        background: #152035 !important;
+        border-color: rgba(0, 229, 255, 0.4) !important;
+        transform: translateX(4px) !important;
     }
 
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] {
         background: linear-gradient(90deg, #0A2540 0%, #0D1424 100%) !important;
-        border-left: 5px solid #00E5FF !important;
-        border-color: rgba(0, 229, 255, 0.7) !important;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.4) !important;
-        transform: translateX(4px);
+        border-left: 4px solid #00E5FF !important;
+        border-color: rgba(0, 229, 255, 0.5) !important;
+        box-shadow: 0 2px 10px rgba(0, 229, 255, 0.15) !important;
     }
 
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] p,
     div.row-widget.stRadio div[role="radiogroup"] > label[data-checked="true"] span {
         color: #00E5FF !important;
         font-weight: 700 !important;
-        text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
-    }
-
-    @keyframes avatarPulse {
-        0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
-        70% { box-shadow: 0 0 0 8px rgba(0, 229, 255, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
     }
 
     .user-card {
-        background: linear-gradient(135deg, #0D1424 0%, #152035 100%);
-        border: 1px solid rgba(0, 229, 255, 0.3);
-        border-radius: 10px;
-        padding: 12px 14px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.3s ease;
-    }
-    .user-card:hover {
-        border-color: #00E5FF;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
-    }
-
-    .user-avatar {
-        background: rgba(0, 229, 255, 0.15);
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        border: 1px solid #00E5FF;
-        animation: avatarPulse 2.5s infinite;
+        background: #0D1424;
+        border: 1px solid rgba(0, 229, 255, 0.15);
+        border-left: 4px solid #00E5FF;
+        border-radius: 6px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        margin-bottom: 10px;
     }
 
     .stTextInput label, .stSelectbox label, .stNumberInput label, .stDateInput label, [data-testid="stWidgetLabel"] p {
@@ -352,19 +315,80 @@ st.write(
     .stButton>button {
         background: #1E293B !important;
         color: #F8FAFC !important;
-        border: 1px solid rgba(0, 229, 255, 0.3) !important;
+        border: 1px solid rgba(0, 229, 255, 0.25) !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         padding: 0.55rem 1.2rem !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     .stButton>button:hover {
         background: #334155 !important;
         border-color: #00E5FF !important;
         color: #00E5FF !important;
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.5) !important;
-        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.3) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    .stButton>button:has(p:contains("Actualizar")), 
+    .stButton>button:has(span:contains("Actualizar")),
+    .stButton>button:has(p:contains("Guardar")), 
+    .stButton>button:has(span:contains("Guardar")),
+    div[data-testid="stFormSubmitButton"]>button {
+        background: linear-gradient(135deg, #0284C7 0%, #00B4D8 100%) !important;
+        color: #FFFFFF !important;
+        border: 1px solid #00E5FF !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 15px rgba(0, 180, 216, 0.35) !important;
+    }
+    .stButton>button:has(p:contains("Actualizar")):hover,
+    .stButton>button:has(span:contains("Actualizar")):hover,
+    .stButton>button:has(p:contains("Guardar")):hover,
+    .stButton>button:has(span:contains("Guardar")):hover {
+        background: linear-gradient(135deg, #0369A1 0%, #0096C7 100%) !important;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.6) !important;
+        color: #FFFFFF !important;
+    }
+
+    .stButton>button:has(p:contains("Eliminar")), 
+    .stButton>button:has(span:contains("Eliminar")) {
+        background: rgba(153, 27, 27, 0.25) !important;
+        color: #FCA5A5 !important;
+        border: 1px solid rgba(239, 68, 68, 0.5) !important;
+    }
+    .stButton>button:has(p:contains("Eliminar")):hover,
+    .stButton>button:has(span:contains("Eliminar")):hover {
+        background: #991B1B !important;
+        color: #FFFFFF !important;
+        border-color: #EF4444 !important;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
+    }
+    div[data-baseweb="input"] input, div[data-baseweb="base-input"] input, div[data-baseweb="textarea"] textarea {
+        background-color: #080C14 !important;
+        color: #F8FAFC !important;
+        border-color: rgba(0, 229, 255, 0.25) !important;
+        border-radius: 6px !important;
+        font-size: 0.9rem !important;
+    } 
+    
+    [data-testid="stExpander"] {
+        background-color: #080C14 !important;
+        border: 1px solid rgba(0, 229, 255, 0.15) !important;
+        border-radius: 6px !important;
+        margin-top: 3px !important;
+        margin-bottom: 3px !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
+
+    [data-testid="stExpander"] summary {
+        color: #00E5FF !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
     }
 
     @keyframes fadeInSlide {
@@ -384,6 +408,7 @@ st.write(
     }
 
     .login-container-animated {
+        animation: fadeInSlide 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         background: linear-gradient(145deg, #0D1424 0%, #0A0F1D 100%);
         border: 1px solid rgba(0, 229, 255, 0.25);
         border-radius: 14px;
@@ -481,33 +506,29 @@ COLUMNAS_LEV = """
     ST_X(geom_ant) as coord_ant_x, ST_Y(geom_ant) as coord_ant_y
 """
 
-# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR DINÁMICA) --------------------------------------------------------------------------------------------------------
+# 06 SECCION ------------------------------------------------------------ BARRA LATERAL IZQUIERDA (SIDEBAR) --------------------------------------------------------------------------------------------------------
 with st.sidebar:
 
   st.markdown(
       """
-        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); margin-bottom: 12px;">
-            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" class="login-logo-animated" style="width: 140px; margin-bottom: 0px;" />
+        <div style="text-align: center; margin-top: -35px; padding-top: 0px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: 12px;">
+            <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" style="width: 140px; margin-bottom: 0px;" />
         </div>
     """,
       unsafe_allow_html=True,
   )
 
-  # Tarjeta de usuario con avatar en pulso neón animado
   st.markdown(
       f"""
-        <div class="user-card">
-            <div class="user-avatar">👤</div>
-            <div style="overflow: hidden;">
-                <div style="color: #00E5FF; font-weight: 700; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.usuario_actual}">{st.session_state.usuario_actual}</div>
-                <div style="color: #94A3B8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
-            </div>
+        <div style="background: #111A30; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px;">
+            <div style="color: #00E5FF; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">👤 {st.session_state.usuario_actual}</div>
+            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase;">{st.session_state.get('tipo_usuario', 'usuario')}</div>
         </div>
     """,
       unsafe_allow_html=True,
   )
 
-  opciones_menu = ["📊 Dashboard General", "⚙️ Editar Registros", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
+  opciones_menu = ["📊 Dashboard General", "⚙️ Editar", "🛠️ Ajustes Manuales", "⚠️ Series Duplicadas"]
 
   if (
       "active_tab" not in st.session_state
@@ -517,11 +538,10 @@ with st.sidebar:
 
   st.markdown(
       "<p style='color: #64748B; font-size: 0.75rem; font-weight: 700;"
-      " text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;'>Navegación</p>",
+      " text-transform: uppercase; margin-bottom: 8px;'>Navegación</p>",
       unsafe_allow_html=True,
   )
 
-  # Menú interactivo dinámico con efectos de desplazamiento
   for opcion in opciones_menu:
     es_activa = st.session_state.active_tab == opcion
     tipo_btn = "primary" if es_activa else "secondary"
@@ -536,9 +556,39 @@ with st.sidebar:
         st.session_state.active_tab = opcion
         st.rerun()
 
+  df_sidebar_levantamientos, _ = obtener_datos(
+      'SELECT fid, "medidorId", serie, domicilio, colonia, activo FROM "Usuarios"."levantamientos"'
+  )
+
+  if not df_sidebar_levantamientos.empty:
+    st.markdown(
+        "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='color: #00E5FF; font-size: 0.85rem; font-weight: 700;"
+        " margin-bottom: 16px; margin-top: 8px;'>📊 Resumen Predios</p>",
+        unsafe_allow_html=True,
+    )
+
+    total_predios = len(df_sidebar_levantamientos)
+    activos_count = len(df_sidebar_levantamientos[df_sidebar_levantamientos["activo"] == True])
+    inactivos_count = total_predios - activos_count
+
+    st.markdown(
+        f"""
+        <div style="font-size: 0.80rem; color: #94A3B8; line-height: 1.6;">
+            <b>Total Registrados:</b> <span style="color: #00E5FF;">{total_predios}</span><br>
+            <b>Activos:</b> <span style="color: #2ECC71;">{activos_count}</span><br>
+            <b>Inactivos:</b> <span style="color: #E74C3C;">{inactivos_count}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
   st.markdown("<br>", unsafe_allow_html=True)
 
-  if st.button("🚪 Cerrar Sesión", key="btn_logout", use_container_width=True):
+  if st.button("Cerrar Sesión", key="btn_logout", use_container_width=True):
     st.session_state.autenticado = False
     st.session_state.gestor_bd_autenticado = False
     st.rerun()
@@ -549,7 +599,7 @@ with st.sidebar:
 df_lev = pd.DataFrame()
 row_first = None
 
-if st.session_state.active_tab == "⚙️ Editar Registros":
+if st.session_state.active_tab == "⚙️ Editar":
   busqueda_edit = st.session_state.get("busqueda_edit_val", "")
 
   if busqueda_edit and busqueda_edit.strip() != "":
@@ -810,8 +860,8 @@ if st.session_state.active_tab == "⚙️ Editar Registros":
   else:
     st.info("No se encontró ningún registro para editar.")
 
-# Renderizar botones de acción en la barra lateral si estamos en la pestaña Editar Registros
-if st.session_state.active_tab == "⚙️ Editar Registros" and not df_lev.empty and row_first is not None:
+# Renderizar botones de acción en la barra lateral si estamos en la pestaña Editar
+if st.session_state.active_tab == "⚙️ Editar" and not df_lev.empty and row_first is not None:
   with st.sidebar:
     st.markdown(
         "<hr style='border: 0.5px solid rgba(0,229,255,0.2); margin: 15px 0;'>",
